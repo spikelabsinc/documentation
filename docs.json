@@ -175,7 +175,7 @@
     "primary": {
       "type": "button",
       "label": "Try it out",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://console.spikelabs.com"
     }
   },
   "products": [
