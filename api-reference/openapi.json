@@ -7,7 +7,7 @@
     "contact": {
       "name": "Spike Labs",
       "email": "developers@spikelabsinc.com",
-      "url": "https://www.spikelabsinc.com"
+      "url": "https://www.spikelabs.com"
     },
     "license": {
       "name": "Proprietary"
@@ -15,11 +15,11 @@
   },
   "servers": [
     {
-      "url": "https://api.spike.dev/v1",
+      "url": "https://api.spikelabs.com/v1",
       "description": "Production"
     },
     {
-      "url": "https://api.spike.dev/v1-sandbox",
+      "url": "https://api.spikelabs.com/v1-sandbox",
       "description": "Sandbox"
     }
   ],
