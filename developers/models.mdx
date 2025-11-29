@@ -1,0 +1,95 @@
+---
+title: "Models"
+description: "Available AI models and capabilities"
+---
+
+# Models
+
+Spike uses its own optimized models by default, designed specifically for real-time conversational AI with personality and memory. You can also configure your personalities to use models from other providers.
+
+## Default models
+
+By default, Spike selects the optimal model for each task:
+
+| Task | Default Model | Description |
+|------|---------------|-------------|
+| Chat | `spike-chat-1` | Optimized for conversational responses with personality |
+| Voice synthesis | `spike-voice-1` | Low-latency text-to-speech with emotion |
+| Voice recognition | `spike-stt-1` | Real-time speech-to-text |
+| Video generation | `spike-avatar-1` | Lip-synced avatar rendering |
+| Embeddings | `spike-embed-1` | Memory and knowledge retrieval |
+
+## Using other providers
+
+You can configure personalities to use models from other providers. Spike acts as a unified interface, handling authentication, rate limiting, and failover.
+
+### Supported providers
+
+<CardGroup cols={3}>
+  <Card title="Anthropic" icon="message">
+    Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
+  </Card>
+  <Card title="OpenAI" icon="robot">
+    GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
+  </Card>
+  <Card title="Google" icon="google">
+    Gemini 1.5 Pro, Gemini 1.5 Flash
+  </Card>
+</CardGroup>
+
+### Configuration
+
+Set the model when creating or updating a personality:
+
+```json
+{
+  "name": "My Assistant",
+  "system_prompt": "You are a helpful assistant.",
+  "model_config": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "temperature": 0.7,
+    "max_tokens": 1024
+  }
+}
+```
+
+### Fallback behavior
+
+If your configured provider is unavailable, Spike can automatically fall back to an equivalent model:
+
+```json
+{
+  "model_config": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "fallback": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514"
+    }
+  }
+}
+```
+
+## Real-time considerations
+
+For voice and video conversations, latency is critical. Spike's default models are optimized for real-time use:
+
+- **First token latency**: < 200ms
+- **Voice synthesis**: < 150ms to first audio
+- **Avatar rendering**: < 300ms to first frame
+
+When using external providers, expect slightly higher latency due to additional network hops. For latency-sensitive applications, we recommend using Spike's default models or providers with streaming support.
+
+## Model selection guidelines
+
+| Use case | Recommended |
+|----------|-------------|
+| Real-time voice/video | Spike default models |
+| Complex reasoning | Claude 3 Opus or GPT-4o |
+| High throughput chat | Claude 3 Haiku or GPT-3.5 Turbo |
+| Cost optimization | Spike default or Haiku-class models |
+
+<Note>
+Model availability and pricing vary by plan. Contact us for enterprise model options.
+</Note>

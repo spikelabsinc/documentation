@@ -1,33 +1,98 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'API Reference'
+description: 'Complete reference for the Spike API'
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URL
 
-## Welcome
+All API requests should be made to:
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+```
+https://api.spike.dev/v1
+```
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+For sandbox/testing:
+
+```
+https://api.spike.dev/v1-sandbox
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+The Spike API uses Bearer token authentication. Include your API key in the `Authorization` header:
+
+```bash
+curl https://api.spike.dev/v1/personalities \
+  -H "Authorization: Bearer sk_live_your_api_key"
+```
+
+API keys can be created and managed in the [Spike Dashboard](https://dashboard.spike.dev).
+
+| Key Prefix | Environment |
+|------------|-------------|
+| `sk_live_` | Production |
+| `sk_test_` | Sandbox |
+
+## Response Format
+
+All responses are JSON. Successful responses include the requested data:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "id": "personality_abc123",
+  "object": "personality",
+  "name": "Luv",
+  ...
+}
+```
+
+List endpoints return paginated results:
+
+```json
+{
+  "data": [...],
+  "has_more": true,
+  "next_cursor": "eyJ..."
+}
+```
+
+## Errors
+
+Errors return an appropriate HTTP status code and a JSON body:
+
+```json
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "The 'name' field is required",
+    "param": "name"
   }
-]
+}
+```
+
+| Status Code | Description |
+|-------------|-------------|
+| 400 | Bad Request - Invalid parameters |
+| 401 | Unauthorized - Invalid or missing API key |
+| 404 | Not Found - Resource doesn't exist |
+| 409 | Conflict - Resource already exists |
+| 429 | Too Many Requests - Rate limited |
+| 500 | Server Error - Something went wrong |
+
+## Rate Limits
+
+API requests are rate limited per API key:
+
+| Plan | Requests/min |
+|------|--------------|
+| Free | 60 |
+| Pro | 600 |
+| Enterprise | Custom |
+
+Rate limit headers are included in responses:
+
+```
+X-RateLimit-Limit: 600
+X-RateLimit-Remaining: 599
+X-RateLimit-Reset: 1704067200
 ```

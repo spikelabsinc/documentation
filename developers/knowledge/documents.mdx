@@ -1,0 +1,245 @@
+---
+title: "Documents"
+description: "Upload documents to your knowledge base"
+---
+
+# Documents
+
+Upload files to your knowledge base. Supported formats include PDF, Word documents, text files, Markdown, and more.
+
+## Upload a Document
+
+```bash
+POST /personalities/:personality_id/knowledge/documents
+Content-Type: multipart/form-data
+```
+
+```bash
+curl -X POST \
+  https://api.spike.com/personalities/personality_xyz/knowledge/documents \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@product-manual.pdf" \
+  -F "metadata={\"category\": \"product\", \"version\": \"2.0\"}"
+```
+
+```json
+{
+  "document_id": "doc_abc123",
+  "filename": "product-manual.pdf",
+  "content_type": "application/pdf",
+  "size_bytes": 2456789,
+  "metadata": {
+    "category": "product",
+    "version": "2.0"
+  },
+  "processing": {
+    "status": "processing",
+    "chunks_created": 0
+  },
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Supported Formats
+
+| Format | Extensions | Notes |
+|--------|------------|-------|
+| PDF | `.pdf` | Text extraction, tables supported |
+| Word | `.docx`, `.doc` | Full formatting preserved |
+| Text | `.txt` | Plain text |
+| Markdown | `.md` | Headers preserved as metadata |
+| HTML | `.html` | Text extracted, tags stripped |
+| CSV | `.csv` | Each row becomes a chunk |
+| JSON | `.json` | Structured data preserved |
+
+**Size limits:**
+- Maximum file size: 50 MB
+- Maximum files per knowledge base: 1,000
+
+## Processing Status
+
+Documents are processed asynchronously. Check the status:
+
+```bash
+GET /personalities/:personality_id/knowledge/documents/:document_id
+```
+
+```json
+{
+  "document_id": "doc_abc123",
+  "filename": "product-manual.pdf",
+  "processing": {
+    "status": "completed",
+    "chunks_created": 127,
+    "tokens": 45230,
+    "completed_at": "2024-01-15T10:32:00Z"
+  }
+}
+```
+
+Processing statuses:
+- `pending` - Queued for processing
+- `processing` - Currently being processed
+- `completed` - Successfully processed
+- `failed` - Processing failed (see `error` field)
+
+## List Documents
+
+```bash
+GET /personalities/:personality_id/knowledge/documents
+```
+
+Query parameters:
+- `limit` - Results per page (default: 20, max: 100)
+- `cursor` - Pagination cursor
+- `status` - Filter by processing status
+- `category` - Filter by metadata category
+
+```json
+{
+  "documents": [
+    {
+      "document_id": "doc_abc123",
+      "filename": "product-manual.pdf",
+      "size_bytes": 2456789,
+      "metadata": {
+        "category": "product"
+      },
+      "processing": {
+        "status": "completed",
+        "chunks_created": 127
+      },
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "next_cursor": "eyJ...",
+    "has_more": true
+  }
+}
+```
+
+## Update Document Metadata
+
+```bash
+PATCH /personalities/:personality_id/knowledge/documents/:document_id
+```
+
+```json
+{
+  "metadata": {
+    "category": "product",
+    "version": "2.1",
+    "deprecated": false
+  }
+}
+```
+
+Metadata can be used to filter which documents are searched during retrieval.
+
+## Replace a Document
+
+Upload a new version of an existing document:
+
+```bash
+PUT /personalities/:personality_id/knowledge/documents/:document_id
+Content-Type: multipart/form-data
+```
+
+The old content is removed and replaced with the new file. The document ID remains the same.
+
+## Delete a Document
+
+```bash
+DELETE /personalities/:personality_id/knowledge/documents/:document_id
+```
+
+This removes the document and all its chunks from the knowledge base.
+
+## Bulk Upload
+
+Upload multiple documents at once:
+
+```bash
+POST /personalities/:personality_id/knowledge/documents/bulk
+Content-Type: multipart/form-data
+```
+
+```bash
+curl -X POST \
+  https://api.spike.com/personalities/personality_xyz/knowledge/documents/bulk \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "files=@doc1.pdf" \
+  -F "files=@doc2.pdf" \
+  -F "files=@doc3.pdf" \
+  -F "metadata={\"category\": \"support\"}"
+```
+
+```json
+{
+  "uploaded": 3,
+  "documents": [
+    {"document_id": "doc_abc123", "filename": "doc1.pdf", "status": "processing"},
+    {"document_id": "doc_def456", "filename": "doc2.pdf", "status": "processing"},
+    {"document_id": "doc_ghi789", "filename": "doc3.pdf", "status": "processing"}
+  ]
+}
+```
+
+## Chunking Configuration
+
+Control how documents are split into chunks:
+
+```bash
+POST /personalities/:personality_id/knowledge/documents
+```
+
+```json
+{
+  "chunking": {
+    "strategy": "semantic",
+    "chunk_size": 512,
+    "chunk_overlap": 50
+  }
+}
+```
+
+| Strategy | Description |
+|----------|-------------|
+| `fixed` | Split by token count |
+| `semantic` | Split at natural boundaries (paragraphs, sections) |
+| `sentence` | Split at sentence boundaries |
+
+## Content Preview
+
+Preview how a document will be chunked before uploading:
+
+```bash
+POST /personalities/:personality_id/knowledge/documents/preview
+Content-Type: multipart/form-data
+```
+
+```json
+{
+  "chunks": [
+    {
+      "index": 0,
+      "content": "Chapter 1: Getting Started\n\nThis guide will help you...",
+      "tokens": 245,
+      "metadata": {
+        "section": "Chapter 1"
+      }
+    },
+    {
+      "index": 1,
+      "content": "Installation\n\nTo install the product, follow these steps...",
+      "tokens": 312,
+      "metadata": {
+        "section": "Chapter 1"
+      }
+    }
+  ],
+  "total_chunks": 127,
+  "total_tokens": 45230
+}
+```

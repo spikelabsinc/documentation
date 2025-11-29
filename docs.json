@@ -1,0 +1,237 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "linden",
+  "name": "Spike Labs",
+  "openapi": ["/api-reference/openapi.json"],
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Space Grotesk",
+      "weight": 600
+    },
+    "body": {
+      "family": "IBM Plex Sans",
+      "weight": 400
+    }
+  },
+  "favicon": "/logo/spike-logo-alpha1.png",
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Spike",
+          "icon": "house",
+          "href": "https://www.spikelabsinc.com"
+        },
+        {
+          "anchor": "Community",
+          "icon": "comment",
+          "href": "https://slack.com"
+        },
+        {
+          "anchor": "Blog",
+          "icon": "pencil",
+          "href": "https://www.luv.com/blog"
+        }
+      ]
+    },
+    "tabs": [
+      {
+        "tab": "Research",
+        "groups": [
+          {
+            "group": "Research",
+            "pages": [
+              "research/hci",
+              "research/not-a-simulacrum",
+              "research/ai-and-hooks",
+              "research/ethical-ai-engagement",
+              "research/pregeneration-and-recall",
+              "research/rigging-and-realtime-rendering"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Luv",
+        "groups": [
+          {
+            "group": "Luv",
+            "pages": [
+              "luv/genesis",
+              "luv/chat",
+              "luv/voice",
+              "luv/video",
+              "luv/gaming"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developers",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "developers/introduction",
+              "developers/authentication",
+              "developers/models"
+            ]
+          },
+          {
+            "group": "Personalities",
+            "pages": [
+              "developers/personalities/overview",
+              "developers/personalities/creating",
+              "developers/personalities/voice",
+              "developers/personalities/appearance"
+            ]
+          },
+          {
+            "group": "Knowledge Base",
+            "pages": [
+              "developers/knowledge/overview",
+              "developers/knowledge/documents",
+              "developers/knowledge/urls-and-feeds",
+              "developers/knowledge/external-sources"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "developers/users/overview",
+              "developers/users/memories",
+              "developers/users/integrations"
+            ]
+          },
+          {
+            "group": "Conversations",
+            "pages": [
+              "developers/conversations/overview",
+              "developers/conversations/creating",
+              "developers/conversations/webrtc",
+              "developers/conversations/pipeline"
+            ]
+          },
+          {
+            "group": "Chat",
+            "pages": [
+              "developers/chat/completions",
+              "developers/chat/streaming"
+            ]
+          },
+          {
+            "group": "Voice",
+            "pages": [
+              "developers/voice/synthesis",
+              "developers/voice/recognition"
+            ]
+          },
+          {
+            "group": "Video",
+            "pages": [
+              "developers/video/generation",
+              "developers/video/webhooks"
+            ]
+          },
+          {
+            "group": "Image",
+            "pages": [
+              "developers/image/generation",
+              "developers/image/editing"
+            ]
+          },
+          {
+            "group": "Games",
+            "pages": [
+              "developers/games/overview",
+              "developers/games/supported",
+              "developers/games/state"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": "/api-reference/openapi.json"
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/logo-text.png",
+    "dark": "/logo/logo-text-white.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Enterprise",
+        "href": "mailto:enterprise@spikelabsinc.com?subject=Enterprise%20Support"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Try it out",
+      "href": "https://dashboard.mintlify.com"
+    }
+  },
+  "products": [
+    {
+      "product": "Core API",
+      "description": "Core API description",
+      "icon": "api",
+      "groups": [
+        {
+          "group": "Getting started",
+          "pages": ["core-api/quickstart", "core-api/authentication"]
+        },
+        {
+          "group": "Endpoints",
+          "pages": ["core-api/users", "core-api/orders"]
+        }
+      ]
+    },
+    {
+      "product": "Analytics Platform",
+      "description": "Analytics Platform description",
+      "icon": "chart-bar",
+      "pages": [
+        "analytics/overview",
+        "analytics/dashboard",
+        "analytics/reports"
+      ]
+    },
+    {
+      "product": "Mobile SDK",
+      "description": "Mobile SDK description",
+      "icon": "smartphone",
+      "href": "https://mobile-sdk-docs.example.com"
+    }
+  ],
+
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/mintlify",
+      "github": "https://github.com/mintlify",
+      "linkedin": "https://linkedin.com/company/mintlify"
+    }
+  },
+  "styling": {
+    "global": "/custom.css"
+  }
+}

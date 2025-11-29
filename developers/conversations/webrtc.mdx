@@ -1,0 +1,274 @@
+---
+title: "WebRTC Connection"
+description: "Connect to conversations via WebRTC"
+---
+
+# WebRTC Connection
+
+Once you create a conversation, you'll receive a `conversation_url` and `token` to establish a WebRTC connection. Spike handles all the complexity of real-time audio/video streaming - you just connect and start talking.
+
+## Quick Start
+
+```javascript
+import { SpikeClient } from '@spike/client';
+
+// Connect to an existing conversation
+const client = new SpikeClient({
+  conversationUrl: 'https://spike.daily.co/conv_abc123',
+  token: 'eyJ...'
+});
+
+// Join the conversation
+await client.join();
+
+// The AI will automatically respond to your audio/video
+client.on('ai-speaking', (event) => {
+  console.log('AI is responding:', event.transcript);
+});
+
+// Leave when done
+await client.leave();
+```
+
+## Connection Options
+
+Configure how you connect to the conversation:
+
+```javascript
+const client = new SpikeClient({
+  conversationUrl: 'https://spike.daily.co/conv_abc123',
+  token: 'eyJ...',
+
+  // Media settings
+  audio: true,                    // Enable microphone
+  video: true,                    // Enable camera
+
+  // Audio configuration
+  audioSource: 'default',         // Microphone device ID
+  echoCancellation: true,         // Reduce echo
+  noiseSuppression: true,         // Reduce background noise
+
+  // Video configuration
+  videoSource: 'default',         // Camera device ID
+  videoQuality: 'high',           // 'low' | 'medium' | 'high'
+
+  // Callbacks
+  onConnected: () => {},
+  onDisconnected: () => {},
+  onError: (error) => {}
+});
+```
+
+## Events
+
+Subscribe to conversation events:
+
+```javascript
+// Connection events
+client.on('connected', () => {
+  console.log('Connected to conversation');
+});
+
+client.on('disconnected', (reason) => {
+  console.log('Disconnected:', reason);
+});
+
+// AI interaction events
+client.on('ai-thinking', () => {
+  // AI is processing your input
+});
+
+client.on('ai-speaking', (event) => {
+  // AI is responding
+  console.log('Transcript:', event.transcript);
+  console.log('Audio level:', event.audioLevel);
+});
+
+client.on('ai-idle', () => {
+  // AI finished speaking, waiting for input
+});
+
+// Turn-taking events
+client.on('user-started-speaking', () => {
+  // User began talking (interrupts AI if speaking)
+});
+
+client.on('user-stopped-speaking', () => {
+  // User finished talking, AI will respond
+});
+
+// Perception events (if enabled)
+client.on('perception', (event) => {
+  console.log('Detected emotion:', event.emotion);
+  console.log('Detected gesture:', event.gesture);
+});
+```
+
+## Managing Media
+
+Control audio and video during the conversation:
+
+```javascript
+// Mute/unmute microphone
+client.setAudioEnabled(false);
+client.setAudioEnabled(true);
+
+// Enable/disable camera
+client.setVideoEnabled(false);
+client.setVideoEnabled(true);
+
+// Switch devices
+await client.setAudioDevice('device-id');
+await client.setVideoDevice('device-id');
+
+// Get available devices
+const devices = await client.getDevices();
+console.log('Microphones:', devices.audio);
+console.log('Cameras:', devices.video);
+```
+
+## Displaying the AI
+
+Render the AI's video stream in your UI:
+
+```javascript
+// Get the AI's video track
+const aiVideoTrack = client.getAIVideoTrack();
+
+// Attach to a video element
+const videoElement = document.getElementById('ai-video');
+videoElement.srcObject = new MediaStream([aiVideoTrack]);
+
+// Or use React
+function AIVideo() {
+  const videoRef = useRef(null);
+  const { aiVideoTrack } = useSpikeConversation();
+
+  useEffect(() => {
+    if (videoRef.current && aiVideoTrack) {
+      videoRef.current.srcObject = new MediaStream([aiVideoTrack]);
+    }
+  }, [aiVideoTrack]);
+
+  return <video ref={videoRef} autoPlay playsInline />;
+}
+```
+
+## React Integration
+
+Use our React hooks for seamless integration:
+
+```jsx
+import { SpikeProvider, useConversation } from '@spike/react';
+
+function App() {
+  return (
+    <SpikeProvider>
+      <Conversation />
+    </SpikeProvider>
+  );
+}
+
+function Conversation() {
+  const {
+    join,
+    leave,
+    isConnected,
+    isAISpeaking,
+    aiVideoTrack,
+    aiTranscript,
+    userTranscript,
+    error
+  } = useConversation({
+    conversationUrl: 'https://spike.daily.co/conv_abc123',
+    token: 'eyJ...'
+  });
+
+  return (
+    <div>
+      {!isConnected ? (
+        <button onClick={join}>Join Conversation</button>
+      ) : (
+        <>
+          <AIVideo track={aiVideoTrack} />
+          <p>{isAISpeaking ? 'AI: ' + aiTranscript : 'Listening...'}</p>
+          <button onClick={leave}>Leave</button>
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+## Voice-Only Mode
+
+For voice-only conversations without video:
+
+```javascript
+const client = new SpikeClient({
+  conversationUrl: 'https://spike.daily.co/conv_abc123',
+  token: 'eyJ...',
+  audio: true,
+  video: false  // Disable video
+});
+
+// AI audio is still available
+const aiAudioTrack = client.getAIAudioTrack();
+```
+
+## Error Handling
+
+Handle connection and media errors gracefully:
+
+```javascript
+client.on('error', (error) => {
+  switch (error.code) {
+    case 'CONNECTION_FAILED':
+      console.error('Failed to connect:', error.message);
+      break;
+    case 'MEDIA_PERMISSION_DENIED':
+      console.error('Microphone/camera access denied');
+      break;
+    case 'TOKEN_EXPIRED':
+      console.error('Conversation token expired');
+      // Fetch a new token and reconnect
+      break;
+    case 'CONVERSATION_ENDED':
+      console.log('Conversation was ended');
+      break;
+    default:
+      console.error('Unknown error:', error);
+  }
+});
+
+// Automatic reconnection
+client.on('disconnected', async (reason) => {
+  if (reason === 'network') {
+    // Attempt to reconnect
+    await client.reconnect();
+  }
+});
+```
+
+## Browser Support
+
+The Spike client uses WebRTC and is supported in:
+
+| Browser | Version |
+|---------|---------|
+| Chrome | 70+ |
+| Firefox | 65+ |
+| Safari | 14+ |
+| Edge | 79+ |
+
+Mobile browsers are also supported on iOS Safari and Android Chrome.
+
+## Network Requirements
+
+For optimal performance:
+
+- **Bandwidth**: Minimum 1 Mbps up/down for voice+video
+- **Latency**: Under 200ms RTT recommended
+- **Ports**: UDP ports 10000-20000 (or TURN relay if blocked)
+
+The client automatically adapts quality based on network conditions.

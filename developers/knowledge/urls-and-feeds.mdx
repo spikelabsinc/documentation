@@ -1,0 +1,307 @@
+---
+title: "URLs & Feeds"
+description: "Add web content and RSS feeds to your knowledge base"
+---
+
+# URLs & Feeds
+
+Keep your knowledge base up to date with web content. Add individual URLs for one-time indexing or RSS/Atom feeds for automatic updates.
+
+## Add a URL
+
+Index content from a web page:
+
+```bash
+POST /personalities/:personality_id/knowledge/urls
+```
+
+```json
+{
+  "url": "https://docs.example.com/getting-started",
+  "metadata": {
+    "category": "documentation"
+  }
+}
+```
+
+```json
+{
+  "url_id": "url_abc123",
+  "url": "https://docs.example.com/getting-started",
+  "metadata": {
+    "category": "documentation"
+  },
+  "processing": {
+    "status": "processing"
+  },
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Crawl a Website
+
+Index multiple pages from a website:
+
+```bash
+POST /personalities/:personality_id/knowledge/urls/crawl
+```
+
+```json
+{
+  "url": "https://docs.example.com",
+  "options": {
+    "max_pages": 100,
+    "max_depth": 3,
+    "include_patterns": ["/docs/*", "/guides/*"],
+    "exclude_patterns": ["/blog/*", "/changelog/*"]
+  },
+  "metadata": {
+    "source": "documentation-site"
+  }
+}
+```
+
+```json
+{
+  "crawl_id": "crawl_abc123",
+  "url": "https://docs.example.com",
+  "status": "crawling",
+  "progress": {
+    "pages_found": 0,
+    "pages_indexed": 0
+  },
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Crawl Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `max_pages` | Maximum pages to index | `100` |
+| `max_depth` | How many links deep to follow | `3` |
+| `include_patterns` | URL patterns to include (glob) | `["*"]` |
+| `exclude_patterns` | URL patterns to skip (glob) | `[]` |
+| `respect_robots` | Honor robots.txt | `true` |
+| `wait_time_ms` | Delay between requests | `1000` |
+
+## Check Crawl Status
+
+```bash
+GET /personalities/:personality_id/knowledge/urls/crawl/:crawl_id
+```
+
+```json
+{
+  "crawl_id": "crawl_abc123",
+  "url": "https://docs.example.com",
+  "status": "completed",
+  "progress": {
+    "pages_found": 87,
+    "pages_indexed": 85,
+    "pages_skipped": 2,
+    "pages_failed": 0
+  },
+  "urls_created": [
+    {"url_id": "url_abc123", "url": "https://docs.example.com/"},
+    {"url_id": "url_def456", "url": "https://docs.example.com/docs/intro"}
+  ],
+  "completed_at": "2024-01-15T10:45:00Z"
+}
+```
+
+## Add an RSS/Atom Feed
+
+Subscribe to a feed for automatic updates:
+
+```bash
+POST /personalities/:personality_id/knowledge/feeds
+```
+
+```json
+{
+  "url": "https://blog.example.com/feed.xml",
+  "options": {
+    "check_interval": "1h",
+    "max_items": 50
+  },
+  "metadata": {
+    "category": "blog"
+  }
+}
+```
+
+```json
+{
+  "feed_id": "feed_abc123",
+  "url": "https://blog.example.com/feed.xml",
+  "title": "Example Blog",
+  "options": {
+    "check_interval": "1h",
+    "max_items": 50
+  },
+  "stats": {
+    "items_indexed": 0,
+    "last_checked": null
+  },
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Feed Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `check_interval` | How often to check for updates | `"1h"` |
+| `max_items` | Maximum items to keep indexed | `100` |
+| `index_full_content` | Fetch and index full article | `true` |
+
+Supported intervals: `15m`, `30m`, `1h`, `6h`, `12h`, `24h`
+
+## List URLs
+
+```bash
+GET /personalities/:personality_id/knowledge/urls
+```
+
+```json
+{
+  "urls": [
+    {
+      "url_id": "url_abc123",
+      "url": "https://docs.example.com/getting-started",
+      "processing": {
+        "status": "completed",
+        "chunks_created": 15,
+        "last_indexed": "2024-01-15T10:32:00Z"
+      },
+      "metadata": {
+        "category": "documentation"
+      }
+    }
+  ],
+  "pagination": {
+    "next_cursor": "eyJ...",
+    "has_more": true
+  }
+}
+```
+
+## List Feeds
+
+```bash
+GET /personalities/:personality_id/knowledge/feeds
+```
+
+```json
+{
+  "feeds": [
+    {
+      "feed_id": "feed_abc123",
+      "url": "https://blog.example.com/feed.xml",
+      "title": "Example Blog",
+      "stats": {
+        "items_indexed": 47,
+        "last_checked": "2024-01-20T14:00:00Z",
+        "next_check": "2024-01-20T15:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+## Refresh a URL
+
+Re-index a URL to get updated content:
+
+```bash
+POST /personalities/:personality_id/knowledge/urls/:url_id/refresh
+```
+
+```json
+{
+  "url_id": "url_abc123",
+  "processing": {
+    "status": "processing"
+  }
+}
+```
+
+## Refresh a Feed
+
+Immediately check a feed for new items:
+
+```bash
+POST /personalities/:personality_id/knowledge/feeds/:feed_id/refresh
+```
+
+## Delete a URL
+
+```bash
+DELETE /personalities/:personality_id/knowledge/urls/:url_id
+```
+
+## Delete a Feed
+
+```bash
+DELETE /personalities/:personality_id/knowledge/feeds/:feed_id
+```
+
+This removes the feed and all indexed items from the knowledge base.
+
+## Bulk Add URLs
+
+Add multiple URLs at once:
+
+```bash
+POST /personalities/:personality_id/knowledge/urls/bulk
+```
+
+```json
+{
+  "urls": [
+    "https://docs.example.com/page1",
+    "https://docs.example.com/page2",
+    "https://docs.example.com/page3"
+  ],
+  "metadata": {
+    "category": "documentation"
+  }
+}
+```
+
+```json
+{
+  "added": 3,
+  "urls": [
+    {"url_id": "url_abc123", "url": "https://docs.example.com/page1", "status": "processing"},
+    {"url_id": "url_def456", "url": "https://docs.example.com/page2", "status": "processing"},
+    {"url_id": "url_ghi789", "url": "https://docs.example.com/page3", "status": "processing"}
+  ]
+}
+```
+
+## Content Extraction
+
+Web pages are processed to extract meaningful content:
+
+1. **HTML parsing** - Extract text content
+2. **Boilerplate removal** - Remove navigation, footers, ads
+3. **Structure preservation** - Keep headings, lists, tables
+4. **Metadata extraction** - Title, description, publish date
+
+### Handling JavaScript Sites
+
+For sites that require JavaScript rendering:
+
+```json
+{
+  "url": "https://app.example.com/docs",
+  "options": {
+    "render_javascript": true,
+    "wait_for_selector": ".content-loaded"
+  }
+}
+```
+
+Note: JavaScript rendering increases processing time.

@@ -1,0 +1,108 @@
+---
+title: "Authentication"
+description: "Authenticate with the Spike API"
+---
+
+# Authentication
+
+The Spike API uses API keys to authenticate requests. You can manage your API keys from the [Spike Dashboard](https://dashboard.spike.dev).
+
+## API Keys
+
+Your API key carries privileges to access your organization's resources, so keep it secure. Don't share your API key in publicly accessible areas such as GitHub, client-side code, or public documentation.
+
+All API requests must include your API key in the `Authorization` header:
+
+```bash
+Authorization: Bearer sk_live_your_api_key_here
+```
+
+## Key types
+
+| Type | Prefix | Description |
+|------|--------|-------------|
+| Live | `sk_live_` | Production keys with full access to your resources |
+| Test | `sk_test_` | Sandbox keys for development and testing |
+
+## Scopes
+
+API keys can be scoped to limit their access:
+
+| Scope | Description |
+|-------|-------------|
+| `personalities:read` | Read personality configurations |
+| `personalities:write` | Create and modify personalities |
+| `users:read` | Read user data and memories |
+| `users:write` | Create and modify users and memories |
+| `conversations:read` | Read conversation history |
+| `conversations:write` | Start and manage conversations |
+| `*` | Full access to all resources |
+
+## Example request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.spike.dev/v1/personalities \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.spike.dev/v1/personalities', {
+  headers: {
+    'Authorization': 'Bearer sk_live_your_api_key_here',
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.spike.dev/v1/personalities',
+    headers={
+        'Authorization': 'Bearer sk_live_your_api_key_here',
+        'Content-Type': 'application/json'
+    }
+)
+```
+
+</CodeGroup>
+
+## Error responses
+
+If authentication fails, the API returns a `401 Unauthorized` error:
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+## Rate limits
+
+API requests are rate limited based on your plan:
+
+| Plan | Requests per minute |
+|------|---------------------|
+| Beta | 60 |
+| Pro | 300 |
+| Enterprise | Custom |
+
+When you exceed your rate limit, the API returns a `429 Too Many Requests` error with a `Retry-After` header indicating when you can retry.
+
+## Security best practices
+
+<Warning>
+Never expose your API key in client-side code. Always make API calls from your backend server.
+</Warning>
+
+- **Rotate keys regularly** — Generate new keys periodically and revoke old ones
+- **Use scoped keys** — Create keys with only the permissions they need
+- **Monitor usage** — Check your dashboard for unusual activity
+- **Use environment variables** — Store keys in environment variables, not in code

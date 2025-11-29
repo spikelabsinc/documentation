@@ -1,0 +1,66 @@
+---
+title: "Introduction"
+description: "Getting started with Spike development"
+---
+
+<img src="/logo/spacesuit.jpeg" className="rounded-lg" alt="Spike" style={{ width: '100%', margin: '0 auto 2rem auto', display: 'block' }} />
+
+<Note>
+The Spike API is currently in private beta. [Request access](mailto:developers@spikelabsinc.com) to get started.
+</Note>
+
+# Introduction
+
+The Spike API lets you build AI companions that perceive, understand, and respond with genuine presence. Whether you're creating a voice assistant, video avatar, or text-based companion, Spike provides the infrastructure for natural, persistent relationships between users and AI.
+
+## What you can build
+
+- **Conversational AI** with personality, memory, and real-time voice/video
+- **AI companions** that remember users across sessions and build genuine relationships
+- **Interactive avatars** that see, hear, and respond with appropriate emotion
+- **Knowledge-grounded assistants** that draw on your domain expertise
+
+## Core concepts
+
+<CardGroup cols={2}>
+  <Card title="Personalities" icon="sparkles" href="/developers/personalities/overview">
+    Define your AI's identity, voice, appearance, and behavioral traits
+  </Card>
+  <Card title="Users" icon="user" href="/developers/users/overview">
+    Track individual users and their unique relationship with your AI
+  </Card>
+  <Card title="Memories" icon="brain" href="/developers/users/memories">
+    Persistent context that builds over time for each user
+  </Card>
+  <Card title="Conversations" icon="comments" href="/developers/conversations/overview">
+    Real-time voice and video sessions with your AI companion
+  </Card>
+</CardGroup>
+
+## Quick start
+
+<Steps>
+  <Step title="Get your API key">
+    [Request beta access](mailto:developers@spikelabsinc.com) and receive your API credentials
+  </Step>
+  <Step title="Create a personality">
+    Define who your AI companion is—its name, voice, system prompt, and traits
+  </Step>
+  <Step title="Start a conversation">
+    Connect a user to your personality via chat, voice, or video
+  </Step>
+</Steps>
+
+## Base URL
+
+All API requests are made to:
+
+```
+https://api.spike.dev/v1
+```
+
+A sandbox environment is also available for testing:
+
+```
+https://api.spike.dev/v1-sandbox
+```
