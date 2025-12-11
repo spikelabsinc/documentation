@@ -1,0 +1,5 @@
+
+# Generated bundled OpenAPI spec
+# api-reference/openapi.bundled.json
+dist/
+node_modules/
