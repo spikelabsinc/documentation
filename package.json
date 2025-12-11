@@ -1,0 +1,14 @@
+{
+  "name": "spike-docs",
+  "private": true,
+  "scripts": {
+    "validate": "redocly lint api-reference/openapi.json",
+    "bundle": "redocly bundle api-reference/openapi.json -o api-reference/openapi.bundled.json",
+    "join": "redocly join api-reference/openapi.json api-reference/specs/*.yaml -o api-reference/openapi.bundled.json --prefix-components-with-info-prop title",
+    "dev": "pnpm join && mint dev",
+    "build": "pnpm join && mint build"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.25.0"
+  }
+}

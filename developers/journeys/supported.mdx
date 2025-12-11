@@ -1,0 +1,276 @@
+---
+title: "Supported Journeys"
+description: "Journey categories, duration types, and companion roles"
+---
+
+# Supported Journeys
+
+Journeys span multiple categories and formats, from fixed-length programs to ongoing daily habits. Each journey type has specific characteristics that determine how users interact with them and how the AI companion adapts its behavior.
+
+## Journey Categories
+
+| Category | Description | Example Journeys |
+|----------|-------------|------------------|
+| `emotional` | Emotional growth, healing, self-discovery | "Heal Your Heart", "Anxiety Toolkit", "Grief Journey" |
+| `fitness` | Health, exercise, physical wellness | "Couch to 5K", "30-Day Yoga", "Hydration Challenge" |
+| `education` | Learning, skill-building, creative pursuits | "30 Day Writing Prompts", "Learn to Code", "Photography Basics" |
+| `professional` | Career, productivity, professional development | "Level Up Your LinkedIn", "Interview Prep", "Public Speaking" |
+| `fun` | Entertainment, personality quizzes, games | "Discover Your Hogwarts House", "What's Your Love Language?" |
+| `habit` | Ongoing daily habits with no defined end | "Daily Gratitude", "Morning Routine", "Meditation Practice" |
+
+### Filtering by Category
+
+```bash
+GET /marketplace/journeys?category=emotional
+```
+
+```json
+{
+  "data": [
+    {
+      "id": "jrn_heal123",
+      "title": "Heal Your Heart",
+      "category": "emotional",
+      "tagline": "A gentle journey through healing",
+      "duration_display": "21 days",
+      "companion_role": "Supportive Guide"
+    },
+    {
+      "id": "jrn_anxiety456",
+      "title": "Anxiety Toolkit",
+      "category": "emotional",
+      "tagline": "Build your personal calm",
+      "duration_display": "14 days",
+      "companion_role": "Supportive Guide"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "cursor_abc"
+}
+```
+
+## Duration Types
+
+Journeys have different temporal structures based on their purpose:
+
+| Type | Description | Streak Handling | Use Cases |
+|------|-------------|-----------------|-----------|
+| `fixed` | Set number of days/weeks (e.g., "30 days", "8 weeks") | Strict or forgiving based on config | Structured programs, courses |
+| `variable` | Self-paced with defined end point | Flexible, no time pressure | Learning paths, skill-building |
+| `ongoing` | Repeating habit with no end | Template steps repeat daily | Daily habits, routines |
+
+### Fixed Duration
+
+Fixed journeys have a set number of steps that must be completed within a timeframe:
+
+```json
+{
+  "duration_type": "fixed",
+  "duration_display": "30 days",
+  "total_steps": 30,
+  "frequency": "daily",
+  "streak_sensitivity": "forgiving",
+  "catch_up_days": 2
+}
+```
+
+### Variable Duration
+
+Variable journeys let users progress at their own pace:
+
+```json
+{
+  "duration_type": "variable",
+  "duration_display": "Self-paced",
+  "total_steps": 12,
+  "frequency": "at your pace",
+  "streak_sensitivity": "flexible"
+}
+```
+
+### Ongoing Duration
+
+Ongoing journeys use template steps that repeat indefinitely:
+
+```json
+{
+  "duration_type": "ongoing",
+  "duration_display": "Ongoing",
+  "total_steps": 1,
+  "frequency": "daily",
+  "streak_sensitivity": "forgiving"
+}
+```
+
+For ongoing journeys, a single template step generates new instances each day.
+
+## Companion Roles
+
+The AI companion adapts its persona and communication style based on the journey type. Each journey defines a companion role that shapes how the AI responds:
+
+| Role | Tone | Best For |
+|------|------|----------|
+| Supportive Guide | Warm, validating, gentle | Emotional journeys, healing, vulnerability |
+| Accountability Coach | Motivating, direct, encouraging | Fitness, habit-building, goals |
+| Creative Cheerleader | Encouraging, playful, enthusiastic | Creative journeys, writing, art |
+| Teacher | Instructive, structured, patient | Educational content, skill-building |
+| Entertainer | Theatrical, fun, witty | Entertainment, quizzes, games |
+
+### Role Behavior Examples
+
+**Supportive Guide** (Emotional Journey)
+> "Thank you for sharing that with me. It takes courage to explore these feelings. What you wrote shows real self-awareness, and I'm honored you trusted me with it."
+
+**Accountability Coach** (Fitness Journey)
+> "Day 5 complete! You're building serious momentum here. Remember, consistency beats perfection. Ready to crush tomorrow?"
+
+**Creative Cheerleader** (Writing Journey)
+> "Oh wow, that opening line gave me chills! The way you described the light through the window—I could picture it perfectly. You're really finding your voice!"
+
+**Teacher** (Education Journey)
+> "Great work on that exercise! You've got the core concept down. One small tip: try adding a return type to make your function more explicit. Ready for the next challenge?"
+
+**Entertainer** (Fun Journey)
+> "A Ravenclaw answer! I should have known from your thoughtful approach. But wait—the Sorting Hat sees something else too... Let's dig deeper!"
+
+### Setting Companion Roles
+
+When creating a journey, specify the companion role:
+
+```bash
+POST /journeys
+```
+
+```json
+{
+  "title": "30 Days of Creative Writing",
+  "category": "education",
+  "companion_role": "Creative Cheerleader",
+  "companion_character": null
+}
+```
+
+For role-playing journeys, you can also set a character:
+
+```json
+{
+  "title": "Hogwarts Sorting Ceremony",
+  "category": "fun",
+  "companion_role": "Entertainer",
+  "companion_character": "The Sorting Hat"
+}
+```
+
+## Pricing Types
+
+Journeys can be monetized in different ways:
+
+| Price Type | Description |
+|------------|-------------|
+| `free` | Available to all users at no cost |
+| `coins` | Purchasable with in-app coins (soft currency) |
+| `gems` | Purchasable with gems (premium currency) |
+| `premium` | Requires premium subscription |
+
+### Setting Journey Pricing
+
+```json
+{
+  "price_type": "gems",
+  "price_amount": 50
+}
+```
+
+When a user starts a paid journey, their currency is validated:
+
+```bash
+POST /user/journeys/start
+```
+
+**Success Response:**
+```json
+{
+  "user_journey": { ... },
+  "currency_deducted": {
+    "type": "gems",
+    "amount": 50
+  }
+}
+```
+
+**Insufficient Funds Response (402):**
+```json
+{
+  "code": "insufficient_funds",
+  "message": "Not enough gems to start this journey",
+  "required": {
+    "type": "gems",
+    "amount": 50
+  },
+  "current": {
+    "gems": 25,
+    "coins": 100
+  }
+}
+```
+
+## Featured Journeys
+
+Journeys can be featured in the marketplace for increased visibility:
+
+```bash
+GET /marketplace/journeys/featured
+```
+
+```json
+{
+  "data": [
+    {
+      "id": "jrn_featured1",
+      "title": "New Year, New Habits",
+      "is_featured": true,
+      "category": "habit",
+      "avg_rating": 4.9,
+      "completion_count": 5420
+    }
+  ]
+}
+```
+
+To feature a journey (admin):
+
+```bash
+PATCH /journeys/{journey_id}
+```
+
+```json
+{
+  "is_featured": true
+}
+```
+
+## Journey Discovery
+
+Users can discover journeys through multiple filters:
+
+```bash
+GET /marketplace/journeys?category=fitness&price_type=free&duration=short&sort=rating
+```
+
+### Sort Options
+
+| Sort | Description |
+|------|-------------|
+| `popular` | By completion count (default) |
+| `newest` | Most recently published |
+| `rating` | Highest rated |
+| `trending` | Recent popularity growth |
+
+### Duration Filters
+
+| Filter | Description |
+|--------|-------------|
+| `short` | Less than 7 days |
+| `medium` | 7-30 days |
+| `long` | More than 30 days |
+| `ongoing` | No end date |

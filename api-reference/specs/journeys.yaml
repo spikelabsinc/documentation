@@ -1,0 +1,1391 @@
+openapi: 3.1.0
+info:
+  title: Journeys Content API
+  description: |
+    API for managing journey templates, steps, and blocks.
+    This is the admin/content management side of the Journeys system.
+  version: 1.0.0
+  contact:
+    name: Spike Labs
+    email: developers@spikelabsinc.com
+    url: https://www.spikelabs.com
+  license:
+    name: Proprietary
+    url: https://www.spikelabs.com/terms
+
+servers:
+  - url: https://api.spikelabs.com/v1
+    description: Production
+  - url: https://api.spikelabs.com/v1-sandbox
+    description: Sandbox
+
+tags:
+  - name: Journeys
+    description: Journey template management
+  - name: Journey Steps
+    description: Step management within journeys
+  - name: Journey Blocks
+    description: Block management within steps
+  - name: Journey Reaction Templates
+    description: Companion reaction prompt templates
+
+paths:
+  # ============================================
+  # JOURNEYS
+  # ============================================
+  /journeys:
+    get:
+      tags: [Journeys]
+      summary: List all journeys
+      description: Returns a paginated list of journey templates with optional filtering
+      operationId: listJourneys
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/JourneyCategory'
+        - name: price_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/PriceType'
+        - name: is_published
+          in: query
+          schema:
+            type: boolean
+        - name: is_featured
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search by title or tagline
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, has_more]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Journey'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Journeys]
+      summary: Create a new journey
+      operationId: createJourney
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JourneyCreate'
+      responses:
+        '201':
+          description: Journey created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /journeys/{journey_id}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    get:
+      tags: [Journeys]
+      summary: Get journey by ID
+      operationId: getJourney
+      parameters:
+        - name: include
+          in: query
+          description: Include related resources
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [steps, steps.blocks, reaction_templates, stats]
+      responses:
+        '200':
+          description: Journey details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyWithRelations'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Journeys]
+      summary: Update journey
+      operationId: updateJourney
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JourneyUpdate'
+      responses:
+        '200':
+          description: Journey updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Journeys]
+      summary: Delete journey
+      description: Soft deletes the journey. Cannot delete if users have active instances.
+      operationId: deleteJourney
+      responses:
+        '200':
+          description: Journey deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedObject'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Cannot delete - journey has active users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /journeys/{journey_id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    post:
+      tags: [Journeys]
+      summary: Publish journey
+      description: Makes the journey available in the marketplace
+      operationId: publishJourney
+      responses:
+        '200':
+          description: Journey published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '400':
+          description: Journey not ready to publish (missing steps, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /journeys/{journey_id}/unpublish:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    post:
+      tags: [Journeys]
+      summary: Unpublish journey
+      description: Removes journey from marketplace. Active users can continue.
+      operationId: unpublishJourney
+      responses:
+        '200':
+          description: Journey unpublished
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+
+  /journeys/{journey_id}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    post:
+      tags: [Journeys]
+      summary: Duplicate journey
+      description: Creates a copy of the journey including all steps and blocks
+      operationId: duplicateJourney
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Title for the duplicated journey
+      responses:
+        '201':
+          description: Journey duplicated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+
+  # ============================================
+  # STEPS
+  # ============================================
+  /journeys/{journey_id}/steps:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    get:
+      tags: [Journey Steps]
+      summary: List steps in journey
+      operationId: listJourneySteps
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [blocks]
+      responses:
+        '200':
+          description: List of steps
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Step'
+
+    post:
+      tags: [Journey Steps]
+      summary: Create a new step
+      operationId: createJourneyStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StepCreate'
+      responses:
+        '201':
+          description: Step created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Step'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /journeys/{journey_id}/steps/reorder:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    post:
+      tags: [Journey Steps]
+      summary: Reorder steps
+      description: Updates the position of multiple steps at once
+      operationId: reorderJourneySteps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step_ids]
+              properties:
+                step_ids:
+                  type: array
+                  description: Step IDs in desired order
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Steps reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Step'
+
+  /journeys/{journey_id}/steps/{step_id}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+      - $ref: '#/components/parameters/StepIdParam'
+
+    get:
+      tags: [Journey Steps]
+      summary: Get step by ID
+      operationId: getJourneyStep
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [blocks]
+      responses:
+        '200':
+          description: Step details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepWithBlocks'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Journey Steps]
+      summary: Update step
+      operationId: updateJourneyStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StepUpdate'
+      responses:
+        '200':
+          description: Step updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Step'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Journey Steps]
+      summary: Delete step
+      operationId: deleteJourneyStep
+      responses:
+        '200':
+          description: Step deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedObject'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================
+  # BLOCKS
+  # ============================================
+  /journeys/{journey_id}/steps/{step_id}/blocks:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+      - $ref: '#/components/parameters/StepIdParam'
+
+    get:
+      tags: [Journey Blocks]
+      summary: List blocks in step
+      operationId: listJourneyBlocks
+      responses:
+        '200':
+          description: List of blocks
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Block'
+
+    post:
+      tags: [Journey Blocks]
+      summary: Create a new block
+      operationId: createJourneyBlock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockCreate'
+      responses:
+        '201':
+          description: Block created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /journeys/{journey_id}/steps/{step_id}/blocks/reorder:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+      - $ref: '#/components/parameters/StepIdParam'
+
+    post:
+      tags: [Journey Blocks]
+      summary: Reorder blocks
+      operationId: reorderJourneyBlocks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [block_ids]
+              properties:
+                block_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Blocks reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Block'
+
+  /journeys/{journey_id}/steps/{step_id}/blocks/{block_id}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+      - $ref: '#/components/parameters/StepIdParam'
+      - $ref: '#/components/parameters/BlockIdParam'
+
+    get:
+      tags: [Journey Blocks]
+      summary: Get block by ID
+      operationId: getJourneyBlock
+      responses:
+        '200':
+          description: Block details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Journey Blocks]
+      summary: Update block
+      operationId: updateJourneyBlock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockUpdate'
+      responses:
+        '200':
+          description: Block updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Journey Blocks]
+      summary: Delete block
+      operationId: deleteJourneyBlock
+      responses:
+        '200':
+          description: Block deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedObject'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================
+  # REACTION TEMPLATES
+  # ============================================
+  /journeys/{journey_id}/reaction-templates:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    get:
+      tags: [Journey Reaction Templates]
+      summary: List reaction templates for journey
+      operationId: listReactionTemplates
+      responses:
+        '200':
+          description: List of reaction templates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReactionTemplate'
+
+    post:
+      tags: [Journey Reaction Templates]
+      summary: Create or update reaction template
+      description: Upserts a reaction template for the given mode
+      operationId: upsertReactionTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionTemplateCreate'
+      responses:
+        '200':
+          description: Template created/updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReactionTemplate'
+
+  /journeys/{journey_id}/reaction-templates/{mode}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+      - name: mode
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/ReactionMode'
+
+    get:
+      tags: [Journey Reaction Templates]
+      summary: Get reaction template by mode
+      operationId: getReactionTemplate
+      responses:
+        '200':
+          description: Reaction template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReactionTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Journey Reaction Templates]
+      summary: Delete reaction template
+      operationId: deleteReactionTemplate
+      responses:
+        '200':
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedObject'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  # ============================================
+  # PARAMETERS
+  # ============================================
+  parameters:
+    JourneyIdParam:
+      name: journey_id
+      in: path
+      required: true
+      description: Journey ID (starts with `jrn_`)
+      schema:
+        type: string
+
+    StepIdParam:
+      name: step_id
+      in: path
+      required: true
+      description: Step ID (starts with `stp_`)
+      schema:
+        type: string
+
+    BlockIdParam:
+      name: block_id
+      in: path
+      required: true
+      description: Block ID (starts with `blk_`)
+      schema:
+        type: string
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items to return (1-100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    CursorParam:
+      name: cursor
+      in: query
+      description: Cursor for pagination
+      schema:
+        type: string
+
+  # ============================================
+  # SCHEMAS
+  # ============================================
+  schemas:
+    # Enums
+    JourneyCategory:
+      type: string
+      enum: [emotional, fitness, education, professional, fun, habit]
+
+    DurationType:
+      type: string
+      enum: [fixed, variable, ongoing]
+
+    PriceType:
+      type: string
+      enum: [free, coins, gems, premium]
+
+    StreakSensitivity:
+      type: string
+      enum: [strict, forgiving, flexible]
+
+    ReactionMode:
+      type: string
+      enum: [validating, celebratory, instructive, playful, analytical, coaching, minimal]
+
+    CompletionRule:
+      type: string
+      enum: [all_required, any_input, timer_complete]
+
+    BlockType:
+      type: string
+      enum:
+        - companion_message
+        - instruction
+        - narrative
+        - text_input
+        - voice_input
+        - single_select
+        - multi_select
+        - scale
+        - binary
+        - counter
+        - timer
+        - checklist
+        - media_upload
+        - external_confirm
+
+    # Journey
+    Journey:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Journey ID (starts with `jrn_`)
+        title:
+          type: string
+        tagline:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/JourneyCategory'
+        tags:
+          type: array
+          items:
+            type: string
+        duration_type:
+          $ref: '#/components/schemas/DurationType'
+        duration_display:
+          type: string
+          example: "30 days"
+        total_steps:
+          type: integer
+        frequency:
+          type: string
+          example: "daily"
+        session_minutes:
+          type: integer
+        companion_role:
+          type: string
+          example: "Creative Cheerleader"
+        companion_character:
+          type: string
+          nullable: true
+        streak_sensitivity:
+          $ref: '#/components/schemas/StreakSensitivity'
+        catch_up_days:
+          type: integer
+          nullable: true
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        price_amount:
+          type: integer
+          nullable: true
+        cover_image_url:
+          type: string
+          format: uri
+          nullable: true
+        color_gradient:
+          type: string
+          example: "from-violet-500 to-purple-600"
+        bg_color:
+          type: string
+          example: "bg-violet-50"
+        completion_count:
+          type: integer
+        active_user_count:
+          type: integer
+        avg_rating:
+          type: number
+          format: float
+          nullable: true
+        is_published:
+          type: boolean
+        is_featured:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    JourneyWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Journey'
+        - type: object
+          properties:
+            steps:
+              type: array
+              items:
+                $ref: '#/components/schemas/StepWithBlocks'
+            reaction_templates:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReactionTemplate'
+
+    JourneyCreate:
+      type: object
+      required: [title, category, duration_type]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        tagline:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        category:
+          $ref: '#/components/schemas/JourneyCategory'
+        tags:
+          type: array
+          items:
+            type: string
+        duration_type:
+          $ref: '#/components/schemas/DurationType'
+        duration_display:
+          type: string
+        frequency:
+          type: string
+        session_minutes:
+          type: integer
+          minimum: 1
+        companion_role:
+          type: string
+        companion_character:
+          type: string
+        streak_sensitivity:
+          $ref: '#/components/schemas/StreakSensitivity'
+        catch_up_days:
+          type: integer
+          minimum: 0
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        price_amount:
+          type: integer
+          minimum: 0
+        cover_image_url:
+          type: string
+          format: uri
+        color_gradient:
+          type: string
+        bg_color:
+          type: string
+
+    JourneyUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        tagline:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/JourneyCategory'
+        tags:
+          type: array
+          items:
+            type: string
+        duration_type:
+          $ref: '#/components/schemas/DurationType'
+        duration_display:
+          type: string
+        frequency:
+          type: string
+        session_minutes:
+          type: integer
+        companion_role:
+          type: string
+        companion_character:
+          type: string
+        streak_sensitivity:
+          $ref: '#/components/schemas/StreakSensitivity'
+        catch_up_days:
+          type: integer
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        price_amount:
+          type: integer
+        cover_image_url:
+          type: string
+          format: uri
+        color_gradient:
+          type: string
+        bg_color:
+          type: string
+        is_featured:
+          type: boolean
+
+    # Step
+    Step:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Step ID (starts with `stp_`)
+        journey_id:
+          type: string
+        position:
+          type: integer
+        day_number:
+          type: integer
+          nullable: true
+        week_number:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        is_milestone:
+          type: boolean
+        is_template:
+          type: boolean
+        creates_deliverable:
+          type: boolean
+        completion_rule:
+          $ref: '#/components/schemas/CompletionRule'
+        reaction_mode:
+          $ref: '#/components/schemas/ReactionMode'
+        reaction_prompt_override:
+          type: string
+          nullable: true
+        available_after_hours:
+          type: integer
+          nullable: true
+        expires_after_hours:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StepWithBlocks:
+      allOf:
+        - $ref: '#/components/schemas/Step'
+        - type: object
+          properties:
+            blocks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Block'
+
+    StepCreate:
+      type: object
+      required: [title, reaction_mode]
+      properties:
+        position:
+          type: integer
+          description: If not provided, appends to end
+        day_number:
+          type: integer
+        week_number:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        subtitle:
+          type: string
+          maxLength: 200
+        is_milestone:
+          type: boolean
+          default: false
+        is_template:
+          type: boolean
+          default: false
+        creates_deliverable:
+          type: boolean
+          default: false
+        completion_rule:
+          $ref: '#/components/schemas/CompletionRule'
+        reaction_mode:
+          $ref: '#/components/schemas/ReactionMode'
+        reaction_prompt_override:
+          type: string
+        available_after_hours:
+          type: integer
+        expires_after_hours:
+          type: integer
+
+    StepUpdate:
+      type: object
+      properties:
+        day_number:
+          type: integer
+        week_number:
+          type: integer
+        title:
+          type: string
+        subtitle:
+          type: string
+        is_milestone:
+          type: boolean
+        is_template:
+          type: boolean
+        creates_deliverable:
+          type: boolean
+        completion_rule:
+          $ref: '#/components/schemas/CompletionRule'
+        reaction_mode:
+          $ref: '#/components/schemas/ReactionMode'
+        reaction_prompt_override:
+          type: string
+        available_after_hours:
+          type: integer
+        expires_after_hours:
+          type: integer
+
+    # Block
+    Block:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Block ID (starts with `blk_`)
+        step_id:
+          type: string
+        position:
+          type: integer
+        block_type:
+          $ref: '#/components/schemas/BlockType'
+        content:
+          type: string
+          nullable: true
+        content_variants:
+          type: array
+          items:
+            type: string
+          nullable: true
+        config:
+          $ref: '#/components/schemas/BlockConfig'
+        is_required:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    BlockCreate:
+      type: object
+      required: [block_type]
+      properties:
+        position:
+          type: integer
+        block_type:
+          $ref: '#/components/schemas/BlockType'
+        content:
+          type: string
+        content_variants:
+          type: array
+          items:
+            type: string
+        config:
+          $ref: '#/components/schemas/BlockConfig'
+        is_required:
+          type: boolean
+          default: true
+
+    BlockUpdate:
+      type: object
+      properties:
+        block_type:
+          $ref: '#/components/schemas/BlockType'
+        content:
+          type: string
+        content_variants:
+          type: array
+          items:
+            type: string
+        config:
+          $ref: '#/components/schemas/BlockConfig'
+        is_required:
+          type: boolean
+
+    BlockConfig:
+      type: object
+      description: |
+        Configuration varies by block type. See specific config schemas.
+      oneOf:
+        - $ref: '#/components/schemas/TextInputConfig'
+        - $ref: '#/components/schemas/VoiceInputConfig'
+        - $ref: '#/components/schemas/SingleSelectConfig'
+        - $ref: '#/components/schemas/MultiSelectConfig'
+        - $ref: '#/components/schemas/ScaleConfig'
+        - $ref: '#/components/schemas/BinaryConfig'
+        - $ref: '#/components/schemas/CounterConfig'
+        - $ref: '#/components/schemas/TimerConfig'
+        - $ref: '#/components/schemas/ChecklistConfig'
+        - $ref: '#/components/schemas/MediaUploadConfig'
+        - $ref: '#/components/schemas/ExternalConfirmConfig'
+        - type: object
+          description: Empty config for message blocks
+
+    TextInputConfig:
+      type: object
+      properties:
+        placeholder:
+          type: string
+        min_length:
+          type: integer
+        max_length:
+          type: integer
+        input_style:
+          type: string
+          enum: [short, long]
+        allow_voice:
+          type: boolean
+
+    VoiceInputConfig:
+      type: object
+      properties:
+        max_duration_seconds:
+          type: integer
+        min_duration_seconds:
+          type: integer
+        transcription_enabled:
+          type: boolean
+
+    SingleSelectConfig:
+      type: object
+      required: [options]
+      properties:
+        options:
+          type: array
+          items:
+            type: object
+            required: [id, label]
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              value:
+                type: string
+              image_url:
+                type: string
+                format: uri
+        display:
+          type: string
+          enum: [list, grid, cards]
+        shuffle:
+          type: boolean
+
+    MultiSelectConfig:
+      type: object
+      required: [options]
+      properties:
+        options:
+          type: array
+          items:
+            type: object
+            required: [id, label]
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              value:
+                type: string
+        min_selections:
+          type: integer
+        max_selections:
+          type: integer
+
+    ScaleConfig:
+      type: object
+      required: [min, max, display]
+      properties:
+        min:
+          type: integer
+        max:
+          type: integer
+        step:
+          type: integer
+        display:
+          type: string
+          enum: [numeric, emoji, labels]
+        emoji_set:
+          type: array
+          items:
+            type: string
+        label_min:
+          type: string
+        label_max:
+          type: string
+
+    BinaryConfig:
+      type: object
+      required: [yes_label, no_label]
+      properties:
+        yes_label:
+          type: string
+        no_label:
+          type: string
+        yes_value:
+          type: string
+        no_value:
+          type: string
+
+    CounterConfig:
+      type: object
+      required: [label, unit, min, max, step]
+      properties:
+        label:
+          type: string
+        unit:
+          type: string
+        min:
+          type: number
+        max:
+          type: number
+        step:
+          type: number
+        default_value:
+          type: number
+
+    TimerConfig:
+      type: object
+      required: [total_seconds]
+      properties:
+        total_seconds:
+          type: integer
+        intervals:
+          type: array
+          items:
+            type: object
+            required: [label, seconds]
+            properties:
+              label:
+                type: string
+              seconds:
+                type: integer
+              type:
+                type: string
+        allow_pause:
+          type: boolean
+        allow_early_complete:
+          type: boolean
+        audio_url:
+          type: string
+          format: uri
+
+    ChecklistConfig:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, label]
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              required:
+                type: boolean
+        allow_custom:
+          type: boolean
+
+    MediaUploadConfig:
+      type: object
+      properties:
+        accepted_types:
+          type: array
+          items:
+            type: string
+        max_size_bytes:
+          type: integer
+        multiple:
+          type: boolean
+        camera_enabled:
+          type: boolean
+
+    ExternalConfirmConfig:
+      type: object
+      required: [action_description, confirm_label]
+      properties:
+        action_description:
+          type: string
+        confirm_label:
+          type: string
+        skip_label:
+          type: string
+        allow_skip:
+          type: boolean
+        require_proof:
+          type: boolean
+
+    # Reaction Template
+    ReactionTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Reaction template ID (starts with `rxt_`)
+        journey_id:
+          type: string
+        mode:
+          $ref: '#/components/schemas/ReactionMode'
+        prompt_template:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ReactionTemplateCreate:
+      type: object
+      required: [mode, prompt_template]
+      properties:
+        mode:
+          $ref: '#/components/schemas/ReactionMode'
+        prompt_template:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    # Common
+    DeletedObject:
+      type: object
+      required: [id, deleted]
+      properties:
+        id:
+          type: string
+        deleted:
+          type: boolean
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  # ============================================
+  # RESPONSES
+  # ============================================
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  # ============================================
+  # SECURITY
+  # ============================================
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Clerk authentication
+
+security:
+  - bearerAuth: []

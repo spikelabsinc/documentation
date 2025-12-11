@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "linden",
   "name": "Spike Labs",
-  "openapi": ["/api-reference/openapi.json"],
+  "openapi": ["/api-reference/openapi.bundled.json"],
   "colors": {
     "primary": "#2563EB",
     "light": "#3B82F6",
@@ -152,12 +152,21 @@
               "developers/games/supported",
               "developers/games/state"
             ]
+          },
+          {
+            "group": "Journeys",
+            "pages": [
+              "developers/journeys/overview",
+              "developers/journeys/supported",
+              "developers/journeys/configuration",
+              "developers/journeys/tracking"
+            ]
           }
         ]
       },
       {
         "tab": "API Reference",
-        "openapi": "/api-reference/openapi.json"
+        "openapi": "/api-reference/openapi.bundled.json"
       }
     ]
   },

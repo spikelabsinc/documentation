@@ -1,0 +1,48 @@
+{
+  "LimitParam": {
+    "name": "limit",
+    "in": "query",
+    "description": "Number of items to return (1-100)",
+    "schema": {
+      "type": "integer",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 100
+    }
+  },
+  "CursorParam": {
+    "name": "cursor",
+    "in": "query",
+    "description": "Pagination cursor from previous response",
+    "schema": {
+      "type": "string"
+    }
+  },
+  "PersonalityIdParam": {
+    "name": "personality_id",
+    "in": "path",
+    "required": true,
+    "description": "Personality ID (starts with `personality_`)",
+    "schema": {
+      "type": "string"
+    }
+  },
+  "UserIdParam": {
+    "name": "user_id",
+    "in": "path",
+    "required": true,
+    "description": "User ID (starts with `user_`)",
+    "schema": {
+      "type": "string"
+    }
+  },
+  "MemoryIdParam": {
+    "name": "memory_id",
+    "in": "path",
+    "required": true,
+    "description": "Memory ID (starts with `mem_`)",
+    "schema": {
+      "type": "string"
+    }
+  }
+}

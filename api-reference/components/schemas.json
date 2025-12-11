@@ -1,0 +1,1400 @@
+{
+  "Error": {
+    "type": "object",
+    "required": ["error"],
+    "properties": {
+      "error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Error code",
+            "example": "invalid_request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "param": {
+            "type": "string",
+            "description": "Parameter that caused the error",
+            "nullable": true
+          }
+        }
+      }
+    }
+  },
+  "DeletedObject": {
+    "type": "object",
+    "required": ["id", "object", "deleted"],
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "object": {
+        "type": "string"
+      },
+      "deleted": {
+        "type": "boolean",
+        "enum": [true]
+      }
+    }
+  },
+  "ApiKey": {
+    "type": "object",
+    "required": ["id", "object", "name", "key_prefix", "scopes", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier",
+        "example": "key_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["api_key"]
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name for the key",
+        "example": "Production API Key"
+      },
+      "key_prefix": {
+        "type": "string",
+        "description": "First 8 characters of the key for identification",
+        "example": "sk_live_"
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["*", "read", "write", "conversations", "chat", "voice", "video"]
+        },
+        "description": "Permissions granted to this key"
+      },
+      "last_used_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "ApiKeyWithSecret": {
+    "allOf": [
+      {
+        "$ref": "#/ApiKey"
+      },
+      {
+        "type": "object",
+        "required": ["secret"],
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "The full secret key. Only returned at creation time.",
+            "example": "sk_live_abc123xyz789..."
+          }
+        }
+      }
+    ]
+  },
+  "CreateApiKeyRequest": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Display name for the key",
+        "maxLength": 100
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["*", "read", "write", "conversations", "chat", "voice", "video"]
+        },
+        "default": ["*"],
+        "description": "Permissions to grant"
+      }
+    }
+  },
+  "UpdateApiKeyRequest": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["*", "read", "write", "conversations", "chat", "voice", "video"]
+        }
+      }
+    }
+  },
+  "Personality": {
+    "type": "object",
+    "required": ["id", "object", "name", "created_at", "updated_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier",
+        "example": "personality_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["personality"]
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name",
+        "example": "Luv"
+      },
+      "description": {
+        "type": "string",
+        "nullable": true,
+        "description": "Brief description of the personality"
+      },
+      "system_prompt": {
+        "type": "string",
+        "nullable": true,
+        "description": "System prompt that defines behavior"
+      },
+      "voice": {
+        "$ref": "#/VoiceConfig"
+      },
+      "appearance": {
+        "$ref": "#/AppearanceConfig"
+      },
+      "traits": {
+        "$ref": "#/PersonalityTraits"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Custom key-value metadata"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "VoiceConfig": {
+    "type": "object",
+    "nullable": true,
+    "properties": {
+      "provider": {
+        "type": "string",
+        "enum": ["elevenlabs", "cartesia", "azure", "openai"],
+        "description": "TTS provider"
+      },
+      "voice_id": {
+        "type": "string",
+        "description": "Provider-specific voice identifier"
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "stability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "similarity_boost": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "speed": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 2
+          }
+        }
+      }
+    }
+  },
+  "AppearanceConfig": {
+    "type": "object",
+    "nullable": true,
+    "properties": {
+      "avatar_id": {
+        "type": "string",
+        "description": "Avatar/replica identifier"
+      },
+      "style": {
+        "type": "string",
+        "enum": ["realistic", "stylized", "animated"],
+        "default": "realistic"
+      },
+      "background": {
+        "type": "string",
+        "description": "Background setting: 'transparent', 'blur', or URL"
+      }
+    }
+  },
+  "PersonalityTraits": {
+    "type": "object",
+    "nullable": true,
+    "description": "Behavioral trait sliders (0-1)",
+    "properties": {
+      "warmth": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How warm and friendly"
+      },
+      "humor": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How playful and humorous"
+      },
+      "formality": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How formal vs casual"
+      },
+      "verbosity": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How detailed in responses"
+      },
+      "empathy": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How emotionally responsive"
+      }
+    }
+  },
+  "CreatePersonalityRequest": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "system_prompt": {
+        "type": "string",
+        "maxLength": 10000
+      },
+      "voice": {
+        "$ref": "#/VoiceConfig"
+      },
+      "appearance": {
+        "$ref": "#/AppearanceConfig"
+      },
+      "traits": {
+        "$ref": "#/PersonalityTraits"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "UpdatePersonalityRequest": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "system_prompt": {
+        "type": "string",
+        "maxLength": 10000
+      },
+      "voice": {
+        "$ref": "#/VoiceConfig"
+      },
+      "appearance": {
+        "$ref": "#/AppearanceConfig"
+      },
+      "traits": {
+        "$ref": "#/PersonalityTraits"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "User": {
+    "type": "object",
+    "required": ["id", "object", "created_at", "updated_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier",
+        "example": "user_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["user"]
+      },
+      "external_id": {
+        "type": "string",
+        "nullable": true,
+        "description": "Your external user identifier"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Custom user data (name, email, etc.)"
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "memory_enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to auto-create memories"
+          }
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "CreateUserRequest": {
+    "type": "object",
+    "properties": {
+      "external_id": {
+        "type": "string",
+        "maxLength": 255,
+        "description": "Your external user identifier"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "memory_enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    }
+  },
+  "UpdateUserRequest": {
+    "type": "object",
+    "properties": {
+      "external_id": {
+        "type": "string",
+        "maxLength": 255
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "memory_enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "MemoryCategory": {
+    "type": "string",
+    "enum": ["personal", "location", "preference", "relationship", "schedule", "context", "custom"],
+    "description": "Category of memory"
+  },
+  "Memory": {
+    "type": "object",
+    "required": ["id", "object", "user_id", "personality_id", "content", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier",
+        "example": "mem_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["memory"]
+      },
+      "user_id": {
+        "type": "string",
+        "description": "User this memory belongs to"
+      },
+      "personality_id": {
+        "type": "string",
+        "description": "Personality this memory is scoped to"
+      },
+      "content": {
+        "type": "string",
+        "description": "The memory content"
+      },
+      "category": {
+        "$ref": "#/MemoryCategory"
+      },
+      "confidence": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "Confidence score (1.0 for manually created)"
+      },
+      "source": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["conversation", "manual", "import"]
+          },
+          "conversation_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "extracted_from": {
+            "type": "string",
+            "nullable": true,
+            "description": "Original text this was extracted from"
+          }
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_used_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true,
+        "description": "Last time this memory was retrieved in a conversation"
+      }
+    }
+  },
+  "CreateMemoryRequest": {
+    "type": "object",
+    "required": ["personality_id", "content"],
+    "properties": {
+      "personality_id": {
+        "type": "string",
+        "description": "Personality to associate this memory with"
+      },
+      "content": {
+        "type": "string",
+        "maxLength": 2000,
+        "description": "The memory content"
+      },
+      "category": {
+        "$ref": "#/MemoryCategory"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "UpdateMemoryRequest": {
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "string",
+        "maxLength": 2000
+      },
+      "category": {
+        "$ref": "#/MemoryCategory"
+      }
+    }
+  },
+  "ChatMessage": {
+    "type": "object",
+    "required": ["role", "content"],
+    "properties": {
+      "role": {
+        "type": "string",
+        "enum": ["system", "user", "assistant"]
+      },
+      "content": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string",
+        "description": "Optional name for the message author"
+      }
+    }
+  },
+  "ChatCompletionRequest": {
+    "type": "object",
+    "required": ["personality_id", "messages"],
+    "properties": {
+      "personality_id": {
+        "type": "string",
+        "description": "Personality to use for the response"
+      },
+      "user_id": {
+        "type": "string",
+        "description": "User for memory context (optional)"
+      },
+      "messages": {
+        "type": "array",
+        "items": {
+          "$ref": "#/ChatMessage"
+        }
+      },
+      "stream": {
+        "type": "boolean",
+        "default": false,
+        "description": "Stream response via SSE"
+      },
+      "temperature": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 2,
+        "default": 0.7
+      },
+      "max_tokens": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4096,
+        "default": 1024
+      },
+      "include_memories": {
+        "type": "boolean",
+        "default": true,
+        "description": "Include relevant user memories in context"
+      },
+      "include_knowledge": {
+        "type": "boolean",
+        "default": true,
+        "description": "Include relevant knowledge base content"
+      }
+    }
+  },
+  "ChatCompletionResponse": {
+    "type": "object",
+    "required": ["id", "object", "created", "choices"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "chat_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["chat.completion"]
+      },
+      "created": {
+        "type": "integer",
+        "description": "Unix timestamp"
+      },
+      "personality_id": {
+        "type": "string"
+      },
+      "choices": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["index", "message", "finish_reason"],
+          "properties": {
+            "index": {
+              "type": "integer"
+            },
+            "message": {
+              "$ref": "#/ChatMessage"
+            },
+            "finish_reason": {
+              "type": "string",
+              "enum": ["stop", "length", "content_filter"]
+            }
+          }
+        }
+      },
+      "usage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer"
+          },
+          "completion_tokens": {
+            "type": "integer"
+          },
+          "total_tokens": {
+            "type": "integer"
+          }
+        }
+      },
+      "memories_used": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "IDs of memories included in context"
+      }
+    }
+  },
+  "SynthesizeSpeechRequest": {
+    "type": "object",
+    "required": ["personality_id", "text"],
+    "properties": {
+      "personality_id": {
+        "type": "string",
+        "description": "Personality whose voice to use"
+      },
+      "text": {
+        "type": "string",
+        "maxLength": 5000,
+        "description": "Text to synthesize"
+      },
+      "format": {
+        "type": "string",
+        "enum": ["mp3", "wav", "opus"],
+        "default": "mp3"
+      },
+      "speed": {
+        "type": "number",
+        "minimum": 0.5,
+        "maximum": 2,
+        "default": 1
+      },
+      "emotion": {
+        "type": "string",
+        "enum": ["neutral", "happy", "sad", "excited", "calm"],
+        "default": "neutral"
+      }
+    }
+  },
+  "TranscriptionResponse": {
+    "type": "object",
+    "required": ["text"],
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "Transcribed text"
+      },
+      "language": {
+        "type": "string",
+        "description": "Detected language code"
+      },
+      "duration": {
+        "type": "number",
+        "description": "Audio duration in seconds"
+      },
+      "words": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "word": {
+              "type": "string"
+            },
+            "start": {
+              "type": "number"
+            },
+            "end": {
+              "type": "number"
+            },
+            "confidence": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
+  },
+  "VideoStatus": {
+    "type": "string",
+    "enum": ["pending", "processing", "completed", "failed", "cancelled"]
+  },
+  "CreateVideoRequest": {
+    "type": "object",
+    "required": ["personality_id"],
+    "properties": {
+      "personality_id": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string",
+        "maxLength": 5000,
+        "description": "Text for the avatar to speak"
+      },
+      "audio_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL of audio file to lip-sync (alternative to text)"
+      },
+      "duration": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 300,
+        "description": "Max duration in seconds"
+      },
+      "resolution": {
+        "type": "string",
+        "enum": ["480p", "720p", "1080p"],
+        "default": "720p"
+      },
+      "background": {
+        "type": "string",
+        "description": "Background: 'transparent', 'blur', or image URL"
+      },
+      "webhook_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL to notify when complete"
+      }
+    }
+  },
+  "VideoGeneration": {
+    "type": "object",
+    "required": ["id", "object", "status", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "vid_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["video.generation"]
+      },
+      "personality_id": {
+        "type": "string"
+      },
+      "status": {
+        "$ref": "#/VideoStatus"
+      },
+      "progress": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
+        "description": "Progress percentage"
+      },
+      "video_url": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "description": "URL of completed video"
+      },
+      "thumbnail_url": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true
+      },
+      "duration": {
+        "type": "number",
+        "nullable": true,
+        "description": "Video duration in seconds"
+      },
+      "error": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "completed_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      }
+    }
+  },
+  "CreateImageRequest": {
+    "type": "object",
+    "required": ["prompt"],
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "maxLength": 4000
+      },
+      "size": {
+        "type": "string",
+        "enum": ["256x256", "512x512", "1024x1024", "1024x1792", "1792x1024"],
+        "default": "1024x1024"
+      },
+      "quality": {
+        "type": "string",
+        "enum": ["standard", "hd"],
+        "default": "standard"
+      },
+      "style": {
+        "type": "string",
+        "enum": ["natural", "vivid"],
+        "default": "natural"
+      },
+      "n": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4,
+        "default": 1,
+        "description": "Number of images to generate"
+      }
+    }
+  },
+  "ImageResponse": {
+    "type": "object",
+    "required": ["created", "data"],
+    "properties": {
+      "created": {
+        "type": "integer",
+        "description": "Unix timestamp"
+      },
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "b64_json": {
+              "type": "string",
+              "description": "Base64 encoded image"
+            },
+            "revised_prompt": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "KnowledgeType": {
+    "type": "string",
+    "enum": ["document", "url", "text", "feed"]
+  },
+  "KnowledgeStatus": {
+    "type": "string",
+    "enum": ["pending", "processing", "ready", "failed"]
+  },
+  "KnowledgeItem": {
+    "type": "object",
+    "required": ["id", "object", "type", "status", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "kb_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["knowledge_item"]
+      },
+      "name": {
+        "type": "string"
+      },
+      "type": {
+        "$ref": "#/KnowledgeType"
+      },
+      "status": {
+        "$ref": "#/KnowledgeStatus"
+      },
+      "source_url": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true
+      },
+      "content_preview": {
+        "type": "string",
+        "nullable": true,
+        "description": "First 500 characters"
+      },
+      "chunk_count": {
+        "type": "integer",
+        "description": "Number of indexed chunks"
+      },
+      "token_count": {
+        "type": "integer",
+        "description": "Total tokens"
+      },
+      "error": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "CreateKnowledgeRequest": {
+    "type": "object",
+    "properties": {
+      "type": {
+        "$ref": "#/KnowledgeType"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 255
+      },
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "URL to fetch (for url/feed types)"
+      },
+      "content": {
+        "type": "string",
+        "maxLength": 100000,
+        "description": "Text content (for text type)"
+      },
+      "refresh_interval": {
+        "type": "string",
+        "enum": ["hourly", "daily", "weekly", "never"],
+        "default": "never",
+        "description": "Auto-refresh for URL/feed types"
+      }
+    }
+  },
+  "KnowledgeSearchResult": {
+    "type": "object",
+    "required": ["item_id", "chunk", "relevance"],
+    "properties": {
+      "item_id": {
+        "type": "string"
+      },
+      "item_name": {
+        "type": "string"
+      },
+      "chunk": {
+        "type": "string",
+        "description": "Matching text chunk"
+      },
+      "relevance": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    }
+  },
+  "ConversationStatus": {
+    "type": "string",
+    "enum": ["connecting", "active", "ended", "failed"]
+  },
+  "ConversationMode": {
+    "type": "string",
+    "enum": ["voice", "video", "voice_video"]
+  },
+  "CreateConversationRequest": {
+    "type": "object",
+    "required": ["personality_id"],
+    "properties": {
+      "personality_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "mode": {
+        "$ref": "#/ConversationMode"
+      },
+      "initial_message": {
+        "type": "string",
+        "description": "Optional greeting from the personality"
+      },
+      "config": {
+        "type": "object",
+        "properties": {
+          "video_enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "audio_enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "vad_enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Voice activity detection"
+          },
+          "interruption_enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Allow user to interrupt AI"
+          }
+        }
+      }
+    }
+  },
+  "Conversation": {
+    "type": "object",
+    "required": ["id", "object", "personality_id", "status", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "conv_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["conversation"]
+      },
+      "personality_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string",
+        "nullable": true
+      },
+      "status": {
+        "$ref": "#/ConversationStatus"
+      },
+      "mode": {
+        "$ref": "#/ConversationMode"
+      },
+      "room_url": {
+        "type": "string",
+        "format": "uri",
+        "description": "WebRTC room URL"
+      },
+      "room_token": {
+        "type": "string",
+        "description": "Token to join the room"
+      },
+      "duration": {
+        "type": "integer",
+        "description": "Duration in seconds",
+        "nullable": true
+      },
+      "transcript": {
+        "type": "array",
+        "nullable": true,
+        "items": {
+          "type": "object",
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": ["user", "assistant"]
+            },
+            "content": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "ended_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      }
+    }
+  },
+  "GameDefinition": {
+    "type": "object",
+    "required": ["id", "name", "type"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "game_tictactoe"
+      },
+      "name": {
+        "type": "string",
+        "example": "Tic Tac Toe"
+      },
+      "description": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string",
+        "enum": ["turn_based", "real_time"]
+      },
+      "min_players": {
+        "type": "integer"
+      },
+      "max_players": {
+        "type": "integer"
+      },
+      "rules": {
+        "type": "string",
+        "description": "Game rules in markdown"
+      }
+    }
+  },
+  "GameSessionStatus": {
+    "type": "string",
+    "enum": ["waiting", "active", "completed", "abandoned"]
+  },
+  "CreateGameSessionRequest": {
+    "type": "object",
+    "required": ["game_id", "personality_id"],
+    "properties": {
+      "game_id": {
+        "type": "string"
+      },
+      "personality_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "difficulty": {
+        "type": "string",
+        "enum": ["easy", "medium", "hard"],
+        "default": "medium"
+      },
+      "user_goes_first": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  },
+  "GameSession": {
+    "type": "object",
+    "required": ["id", "object", "game_id", "personality_id", "status", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "gs_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["game_session"]
+      },
+      "game_id": {
+        "type": "string"
+      },
+      "personality_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string",
+        "nullable": true
+      },
+      "status": {
+        "$ref": "#/GameSessionStatus"
+      },
+      "current_turn": {
+        "type": "string",
+        "enum": ["user", "personality"]
+      },
+      "state": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Game-specific state"
+      },
+      "winner": {
+        "type": "string",
+        "enum": ["user", "personality", "draw"],
+        "nullable": true
+      },
+      "move_count": {
+        "type": "integer"
+      },
+      "personality_commentary": {
+        "type": "string",
+        "nullable": true,
+        "description": "Personality's latest comment"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "GameMoveRequest": {
+    "type": "object",
+    "required": ["move"],
+    "properties": {
+      "move": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Game-specific move data"
+      },
+      "message": {
+        "type": "string",
+        "description": "Optional message to the personality"
+      }
+    }
+  },
+  "GameMoveResponse": {
+    "type": "object",
+    "required": ["session", "user_move_valid"],
+    "properties": {
+      "session": {
+        "$ref": "#/GameSession"
+      },
+      "user_move_valid": {
+        "type": "boolean"
+      },
+      "user_move_error": {
+        "type": "string",
+        "nullable": true
+      },
+      "personality_move": {
+        "type": "object",
+        "additionalProperties": true,
+        "nullable": true
+      },
+      "personality_message": {
+        "type": "string",
+        "nullable": true,
+        "description": "Personality's response/commentary"
+      }
+    }
+  },
+  "WebhookEvent": {
+    "type": "string",
+    "enum": [
+      "conversation.started",
+      "conversation.ended",
+      "video.completed",
+      "video.failed",
+      "knowledge.processed",
+      "memory.created"
+    ]
+  },
+  "Webhook": {
+    "type": "object",
+    "required": ["id", "object", "url", "events", "created_at"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "example": "wh_abc123"
+      },
+      "object": {
+        "type": "string",
+        "enum": ["webhook"]
+      },
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "$ref": "#/WebhookEvent"
+        }
+      },
+      "secret": {
+        "type": "string",
+        "description": "Signing secret (only on create)"
+      },
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "CreateWebhookRequest": {
+    "type": "object",
+    "required": ["url", "events"],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "$ref": "#/WebhookEvent"
+        }
+      }
+    }
+  },
+  "UpdateWebhookRequest": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "$ref": "#/WebhookEvent"
+        }
+      },
+      "enabled": {
+        "type": "boolean"
+      }
+    }
+  },
+  "UserIntegration": {
+    "type": "object",
+    "required": ["provider", "status", "connected_at"],
+    "properties": {
+      "provider": {
+        "type": "string",
+        "enum": ["google", "spotify", "apple_music", "calendar"]
+      },
+      "status": {
+        "type": "string",
+        "enum": ["connected", "expired", "error"]
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "connected_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      }
+    }
+  }
+}

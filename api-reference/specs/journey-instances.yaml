@@ -1,0 +1,1421 @@
+openapi: 3.1.0
+info:
+  title: User Journeys API
+  description: |
+    API for user journey instances, progress tracking, and step completion.
+    This is the user-facing side of the Journeys system.
+  version: 1.0.0
+  contact:
+    name: Spike Labs
+    email: developers@spikelabsinc.com
+    url: https://www.spikelabs.com
+  license:
+    name: Proprietary
+    url: https://www.spikelabs.com/terms
+
+servers:
+  - url: https://api.spikelabs.com/v1
+    description: Production
+  - url: https://api.spikelabs.com/v1-sandbox
+    description: Sandbox
+
+tags:
+  - name: Journey Marketplace
+    description: Browse and discover journeys
+  - name: User Journeys
+    description: User journey enrollment and progress
+  - name: User Journey Steps
+    description: Step completion and responses
+  - name: User Journey Deliverables
+    description: User-created content from journeys
+
+paths:
+  # ============================================
+  # MARKETPLACE (Browse Journeys)
+  # ============================================
+  /marketplace/journeys:
+    get:
+      tags: [Journey Marketplace]
+      summary: Browse available journeys
+      description: Returns published journeys available for enrollment
+      operationId: browseJourneys
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/JourneyCategory'
+        - name: price_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/PriceType'
+        - name: duration
+          in: query
+          description: Filter by duration type
+          schema:
+            type: string
+            enum: [short, medium, long, ongoing]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [popular, newest, rating, trending]
+            default: popular
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of available journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, has_more]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JourneyListing'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+                    nullable: true
+
+  /marketplace/journeys/featured:
+    get:
+      tags: [Journey Marketplace]
+      summary: Get featured journeys
+      operationId: getFeaturedJourneys
+      responses:
+        '200':
+          description: Featured journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JourneyListing'
+
+  /marketplace/journeys/{journey_id}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    get:
+      tags: [Journey Marketplace]
+      summary: Get journey details
+      description: Returns full journey details for the listing page
+      operationId: getJourneyDetails
+      responses:
+        '200':
+          description: Journey details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /marketplace/journeys/{journey_id}/preview:
+    parameters:
+      - $ref: '#/components/parameters/JourneyIdParam'
+
+    get:
+      tags: [Journey Marketplace]
+      summary: Preview journey steps
+      description: Returns a preview of the first few steps (no content, just titles)
+      operationId: previewJourneySteps
+      responses:
+        '200':
+          description: Step preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, total_steps]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StepPreview'
+                  total_steps:
+                    type: integer
+
+  # ============================================
+  # USER JOURNEYS
+  # ============================================
+  /user/journeys:
+    get:
+      tags: [User Journeys]
+      summary: List user's journeys
+      description: Returns all journeys the user is enrolled in or has completed
+      operationId: listUserJourneys
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserJourneyStatus'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: User's journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, has_more]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserJourney'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+                    nullable: true
+
+  /user/journeys/active:
+    get:
+      tags: [User Journeys]
+      summary: Get active journeys
+      description: Returns only active (in-progress) journeys with current step info
+      operationId: getActiveJourneys
+      responses:
+        '200':
+          description: Active journeys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserJourneyActive'
+
+  /user/journeys/start:
+    post:
+      tags: [User Journeys]
+      summary: Start a journey
+      description: Enrolls the user in a journey and unlocks the first step
+      operationId: startJourney
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [journey_id]
+              properties:
+                journey_id:
+                  type: string
+                  description: Journey ID (starts with `jrn_`)
+      responses:
+        '201':
+          description: Journey started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourneyStarted'
+        '400':
+          description: Cannot start journey (already enrolled, insufficient currency, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '402':
+          description: Payment required (insufficient gems/coins)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentRequiredError'
+
+  /user/journeys/{user_journey_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    get:
+      tags: [User Journeys]
+      summary: Get user journey details
+      description: Returns full details of user's journey progress
+      operationId: getUserJourney
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [steps, current_step, deliverables]
+      responses:
+        '200':
+          description: User journey details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourneyDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /user/journeys/{user_journey_id}/pause:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    post:
+      tags: [User Journeys]
+      summary: Pause journey
+      description: Pauses the journey (stops streak tracking)
+      operationId: pauseJourney
+      responses:
+        '200':
+          description: Journey paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourney'
+
+  /user/journeys/{user_journey_id}/resume:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    post:
+      tags: [User Journeys]
+      summary: Resume journey
+      description: Resumes a paused journey
+      operationId: resumeJourney
+      responses:
+        '200':
+          description: Journey resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourneyResumed'
+
+  /user/journeys/{user_journey_id}/abandon:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    post:
+      tags: [User Journeys]
+      summary: Abandon journey
+      description: Abandons the journey (can be restarted later)
+      operationId: abandonJourney
+      responses:
+        '200':
+          description: Journey abandoned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourney'
+
+  /user/journeys/{user_journey_id}/catch-up:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    post:
+      tags: [User Journeys]
+      summary: Use catch-up
+      description: Uses a catch-up to preserve streak after missed day(s)
+      operationId: useCatchUp
+      responses:
+        '200':
+          description: Catch-up used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatchUpResult'
+        '400':
+          description: No catch-ups remaining or not applicable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/journeys/{user_journey_id}/rate:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    post:
+      tags: [User Journeys]
+      summary: Rate completed journey
+      description: Submit rating for a completed journey
+      operationId: rateJourney
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                feedback:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Rating submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: Journey not completed or already rated
+
+  # ============================================
+  # STEPS
+  # ============================================
+  /user/journeys/{user_journey_id}/steps:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    get:
+      tags: [User Journey Steps]
+      summary: List all steps with status
+      description: Returns all steps in the journey with user's completion status
+      operationId: listUserSteps
+      responses:
+        '200':
+          description: Steps with status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserStepSummary'
+
+  /user/journeys/{user_journey_id}/current-step:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+
+    get:
+      tags: [User Journey Steps]
+      summary: Get current step
+      description: Returns the current step with full blocks ready for rendering
+      operationId: getCurrentStep
+      responses:
+        '200':
+          description: Current step with blocks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentStep'
+        '404':
+          description: No current step (journey completed or paused)
+
+  /user/journeys/{user_journey_id}/steps/{user_step_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+      - $ref: '#/components/parameters/UserStepIdParam'
+
+    get:
+      tags: [User Journey Steps]
+      summary: Get step details
+      description: Returns step details with user's responses (if completed)
+      operationId: getUserStep
+      responses:
+        '200':
+          description: Step details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStepDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /user/journeys/{user_journey_id}/steps/{user_step_id}/start:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+      - $ref: '#/components/parameters/UserStepIdParam'
+
+    post:
+      tags: [User Journey Steps]
+      summary: Start step
+      description: Marks the step as started (for time tracking)
+      operationId: startStep
+      responses:
+        '200':
+          description: Step started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStepDetail'
+        '400':
+          description: Step not available (locked, already completed)
+
+  /user/journeys/{user_journey_id}/steps/{user_step_id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+      - $ref: '#/components/parameters/UserStepIdParam'
+
+    post:
+      tags: [User Journey Steps]
+      summary: Complete step
+      description: |
+        Submits responses for the step and marks it complete.
+        Returns companion reaction and unlocks next step.
+      operationId: completeStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StepCompletionRequest'
+      responses:
+        '200':
+          description: Step completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepCompletionResult'
+        '400':
+          description: Invalid responses or step not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /user/journeys/{user_journey_id}/steps/{user_step_id}/responses:
+    parameters:
+      - $ref: '#/components/parameters/UserJourneyIdParam'
+      - $ref: '#/components/parameters/UserStepIdParam'
+
+    get:
+      tags: [User Journey Steps]
+      summary: Get step responses
+      description: Returns the user's responses for a completed step
+      operationId: getStepResponses
+      responses:
+        '200':
+          description: Step responses
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlockResponse'
+
+  # ============================================
+  # DELIVERABLES
+  # ============================================
+  /user/deliverables:
+    get:
+      tags: [User Journey Deliverables]
+      summary: List user's deliverables
+      description: Returns all deliverables created across all journeys
+      operationId: listDeliverables
+      parameters:
+        - name: journey_id
+          in: query
+          schema:
+            type: string
+        - name: content_type
+          in: query
+          schema:
+            type: string
+            enum: [text, image, audio]
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: User's deliverables
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, has_more]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deliverable'
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+                    nullable: true
+
+  /user/deliverables/{deliverable_id}:
+    parameters:
+      - name: deliverable_id
+        in: path
+        required: true
+        description: Deliverable ID (starts with `dlv_`)
+        schema:
+          type: string
+
+    get:
+      tags: [User Journey Deliverables]
+      summary: Get deliverable
+      operationId: getDeliverable
+      responses:
+        '200':
+          description: Deliverable details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deliverable'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [User Journey Deliverables]
+      summary: Update deliverable
+      description: Update title or visibility settings
+      operationId: updateDeliverable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                is_public:
+                  type: boolean
+                is_pinned:
+                  type: boolean
+      responses:
+        '200':
+          description: Deliverable updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deliverable'
+
+    delete:
+      tags: [User Journey Deliverables]
+      summary: Delete deliverable
+      operationId: deleteDeliverable
+      responses:
+        '200':
+          description: Deliverable deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedObject'
+
+  /user/deliverables/{deliverable_id}/share:
+    parameters:
+      - name: deliverable_id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [User Journey Deliverables]
+      summary: Share deliverable
+      description: Generates a shareable link
+      operationId: shareDeliverable
+      responses:
+        '200':
+          description: Share link generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  share_url:
+                    type: string
+                    format: uri
+                  expires_at:
+                    type: string
+                    format: date-time
+
+  # ============================================
+  # STATS
+  # ============================================
+  /user/journey-stats:
+    get:
+      tags: [User Journeys]
+      summary: Get journey statistics
+      description: Returns aggregate stats across all user journeys
+      operationId: getJourneyStats
+      responses:
+        '200':
+          description: Journey statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserJourneyStats'
+
+components:
+  # ============================================
+  # PARAMETERS
+  # ============================================
+  parameters:
+    JourneyIdParam:
+      name: journey_id
+      in: path
+      required: true
+      description: Journey ID (starts with `jrn_`)
+      schema:
+        type: string
+
+    UserJourneyIdParam:
+      name: user_journey_id
+      in: path
+      required: true
+      description: User journey ID (starts with `ujrn_`)
+      schema:
+        type: string
+
+    UserStepIdParam:
+      name: user_step_id
+      in: path
+      required: true
+      description: User step ID (starts with `ustp_`)
+      schema:
+        type: string
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items to return (1-100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    CursorParam:
+      name: cursor
+      in: query
+      description: Cursor for pagination
+      schema:
+        type: string
+
+  # ============================================
+  # SCHEMAS
+  # ============================================
+  schemas:
+    # Enums
+    JourneyCategory:
+      type: string
+      enum: [emotional, fitness, education, professional, fun, habit]
+
+    PriceType:
+      type: string
+      enum: [free, coins, gems, premium]
+
+    UserJourneyStatus:
+      type: string
+      enum: [active, paused, completed, abandoned]
+
+    UserStepStatus:
+      type: string
+      enum: [locked, available, in_progress, completed, skipped]
+
+    BlockType:
+      type: string
+      enum:
+        - companion_message
+        - instruction
+        - narrative
+        - text_input
+        - voice_input
+        - single_select
+        - multi_select
+        - scale
+        - binary
+        - counter
+        - timer
+        - checklist
+        - media_upload
+        - external_confirm
+
+    # Marketplace
+    JourneyListing:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Journey ID (starts with `jrn_`)
+        title:
+          type: string
+        tagline:
+          type: string
+        category:
+          $ref: '#/components/schemas/JourneyCategory'
+        duration_display:
+          type: string
+        frequency:
+          type: string
+        session_minutes:
+          type: integer
+        price_type:
+          $ref: '#/components/schemas/PriceType'
+        price_amount:
+          type: integer
+          nullable: true
+        cover_image_url:
+          type: string
+          format: uri
+          nullable: true
+        color_gradient:
+          type: string
+        completion_count:
+          type: integer
+        active_user_count:
+          type: integer
+        avg_rating:
+          type: number
+          format: float
+          nullable: true
+        is_featured:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+
+    JourneyDetail:
+      allOf:
+        - $ref: '#/components/schemas/JourneyListing'
+        - type: object
+          properties:
+            description:
+              type: string
+            total_steps:
+              type: integer
+            companion_role:
+              type: string
+            streak_sensitivity:
+              type: string
+            catch_up_days:
+              type: integer
+              nullable: true
+            outcomes:
+              type: array
+              description: What you'll achieve
+              items:
+                type: string
+            user_enrollment:
+              description: User's enrollment status (if authenticated)
+              nullable: true
+              $ref: '#/components/schemas/UserEnrollmentStatus'
+
+    UserEnrollmentStatus:
+      type: object
+      properties:
+        is_enrolled:
+          type: boolean
+        user_journey_id:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/UserJourneyStatus'
+        progress:
+          type: number
+          format: float
+          description: Completion percentage (0-100)
+
+    StepPreview:
+      type: object
+      properties:
+        position:
+          type: integer
+        day_number:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        is_milestone:
+          type: boolean
+
+    # User Journey
+    UserJourney:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User journey ID (starts with `ujrn_`)
+        journey_id:
+          type: string
+        journey:
+          $ref: '#/components/schemas/JourneyListing'
+        status:
+          $ref: '#/components/schemas/UserJourneyStatus'
+        current_step_position:
+          type: integer
+        completed_steps_count:
+          type: integer
+        total_steps:
+          type: integer
+        progress:
+          type: number
+          format: float
+          description: Completion percentage (0-100)
+        current_streak:
+          type: integer
+        longest_streak:
+          type: integer
+        catch_ups_remaining:
+          type: integer
+          nullable: true
+        catch_ups_used:
+          type: integer
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+        streak_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_step_available_at:
+          type: string
+          format: date-time
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        user_rating:
+          type: integer
+          nullable: true
+
+    UserJourneyActive:
+      allOf:
+        - $ref: '#/components/schemas/UserJourney'
+        - type: object
+          properties:
+            current_step:
+              $ref: '#/components/schemas/UserStepSummary'
+            streak_status:
+              type: string
+              enum: [safe, at_risk, broken]
+            hours_until_streak_expires:
+              type: integer
+              nullable: true
+
+    UserJourneyDetail:
+      allOf:
+        - $ref: '#/components/schemas/UserJourney'
+        - type: object
+          properties:
+            steps:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserStepSummary'
+            deliverables:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeliverableSummary'
+            rewards:
+              $ref: '#/components/schemas/JourneyRewards'
+
+    UserJourneyStarted:
+      type: object
+      properties:
+        user_journey:
+          $ref: '#/components/schemas/UserJourney'
+        first_step:
+          $ref: '#/components/schemas/CurrentStep'
+        currency_deducted:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum: [coins, gems]
+            amount:
+              type: integer
+
+    UserJourneyResumed:
+      type: object
+      properties:
+        user_journey:
+          $ref: '#/components/schemas/UserJourney'
+        current_step:
+          $ref: '#/components/schemas/CurrentStep'
+        streak_restored:
+          type: boolean
+        catch_up_required:
+          type: boolean
+
+    CatchUpResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        catch_ups_remaining:
+          type: integer
+        streak_preserved:
+          type: boolean
+        current_streak:
+          type: integer
+
+    JourneyRewards:
+      type: object
+      properties:
+        badge:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            image_url:
+              type: string
+        gems_earned:
+          type: integer
+        coins_earned:
+          type: integer
+
+    # Steps
+    UserStepSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User step ID (starts with `ustp_`)
+        step_id:
+          type: string
+        position:
+          type: integer
+        day_number:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/UserStepStatus'
+        is_milestone:
+          type: boolean
+        creates_deliverable:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        instance_number:
+          type: integer
+          description: For repeating template steps
+
+    CurrentStep:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User step ID (starts with `ustp_`)
+        step_id:
+          type: string
+        position:
+          type: integer
+        day_number:
+          type: integer
+          nullable: true
+        week_number:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        is_milestone:
+          type: boolean
+        creates_deliverable:
+          type: boolean
+        completion_rule:
+          type: string
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockForRender'
+        journey:
+          type: object
+          properties:
+            color_gradient:
+              type: string
+            bg_color:
+              type: string
+            companion_role:
+              type: string
+            companion_character:
+              type: string
+              nullable: true
+
+    UserStepDetail:
+      allOf:
+        - $ref: '#/components/schemas/CurrentStep'
+        - type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/UserStepStatus'
+            started_at:
+              type: string
+              format: date-time
+              nullable: true
+            completed_at:
+              type: string
+              format: date-time
+              nullable: true
+            time_spent_seconds:
+              type: integer
+              nullable: true
+            companion_reaction:
+              type: string
+              nullable: true
+            responses:
+              type: array
+              items:
+                $ref: '#/components/schemas/BlockResponse'
+
+    BlockForRender:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Block ID (starts with `blk_`)
+        position:
+          type: integer
+        block_type:
+          $ref: '#/components/schemas/BlockType'
+        content:
+          type: string
+          nullable: true
+          description: For message/instruction blocks, may be randomized from variants
+        config:
+          type: object
+          description: Type-specific configuration
+        is_required:
+          type: boolean
+
+    BlockResponse:
+      type: object
+      properties:
+        block_id:
+          type: string
+        block_type:
+          $ref: '#/components/schemas/BlockType'
+        value:
+          $ref: '#/components/schemas/ResponseValue'
+        metadata:
+          type: object
+          properties:
+            input_method:
+              type: string
+              enum: [keyboard, voice, tap]
+            time_to_complete:
+              type: integer
+              description: Seconds to complete this block
+        created_at:
+          type: string
+          format: date-time
+
+    ResponseValue:
+      type: object
+      description: |
+        Structure varies by block type:
+        - text_input: { text: string, word_count: number }
+        - voice_input: { audio_url: string, duration_seconds: number, transcription?: string }
+        - single_select: { selected_id: string, selected_value?: string }
+        - multi_select: { selected_ids: string[] }
+        - scale: { value: number }
+        - binary: { value: boolean }
+        - counter: { value: number, unit: string }
+        - timer: { completed: boolean, actual_seconds: number, early_complete: boolean }
+        - checklist: { checked_ids: string[], custom_items?: string[] }
+        - media_upload: { file_url: string, file_type: string, file_size: number }
+        - external_confirm: { confirmed: boolean, skipped: boolean }
+
+    StepCompletionRequest:
+      type: object
+      required: [responses]
+      properties:
+        responses:
+          type: array
+          items:
+            type: object
+            required: [block_id, value]
+            properties:
+              block_id:
+                type: string
+              value:
+                $ref: '#/components/schemas/ResponseValue'
+              metadata:
+                type: object
+                properties:
+                  input_method:
+                    type: string
+                  time_to_complete:
+                    type: integer
+
+    StepCompletionResult:
+      type: object
+      properties:
+        step_completed:
+          type: boolean
+        companion_reaction:
+          type: object
+          properties:
+            message:
+              type: string
+            mode:
+              type: string
+        streak_update:
+          type: object
+          properties:
+            previous_streak:
+              type: integer
+            current_streak:
+              type: integer
+            is_new_record:
+              type: boolean
+        rewards:
+          type: object
+          properties:
+            gems_earned:
+              type: integer
+            coins_earned:
+              type: integer
+            badge_earned:
+              type: object
+              nullable: true
+        next_step:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            available_at:
+              type: string
+              format: date-time
+              nullable: true
+        journey_completed:
+          type: boolean
+        journey_completion_rewards:
+          $ref: '#/components/schemas/JourneyRewards'
+        deliverable_created:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+
+    # Deliverables
+    DeliverableSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Deliverable ID (starts with `dlv_`)
+        title:
+          type: string
+        content_type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        is_pinned:
+          type: boolean
+
+    Deliverable:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Deliverable ID (starts with `dlv_`)
+        user_journey_id:
+          type: string
+        user_step_id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+          nullable: true
+        content_type:
+          type: string
+        media_url:
+          type: string
+          format: uri
+          nullable: true
+        is_public:
+          type: boolean
+        is_pinned:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        journey:
+          type: object
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+        step:
+          type: object
+          properties:
+            day_number:
+              type: integer
+              nullable: true
+            title:
+              type: string
+
+    # Stats
+    UserJourneyStats:
+      type: object
+      properties:
+        total_journeys_started:
+          type: integer
+        total_journeys_completed:
+          type: integer
+        total_steps_completed:
+          type: integer
+        total_deliverables_created:
+          type: integer
+        current_active_journeys:
+          type: integer
+        longest_streak_ever:
+          type: integer
+        total_time_spent_minutes:
+          type: integer
+        categories_explored:
+          type: array
+          items:
+            type: string
+        completion_rate:
+          type: number
+          format: float
+          description: Percentage of started journeys completed
+
+    # Common
+    DeletedObject:
+      type: object
+      required: [id, deleted]
+      properties:
+        id:
+          type: string
+        deleted:
+          type: boolean
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    ValidationError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "validation_error"
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    PaymentRequiredError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "insufficient_funds"
+        message:
+          type: string
+        required:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [coins, gems, premium]
+            amount:
+              type: integer
+        current:
+          type: object
+          properties:
+            coins:
+              type: integer
+            gems:
+              type: integer
+
+  # ============================================
+  # RESPONSES
+  # ============================================
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  # ============================================
+  # SECURITY
+  # ============================================
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Clerk authentication
+
+security:
+  - bearerAuth: []

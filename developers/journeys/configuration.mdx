@@ -1,0 +1,443 @@
+---
+title: "Journey Configuration"
+description: "Configure journey structure, steps, blocks, and reaction templates"
+---
+
+# Journey Configuration
+
+Journeys are built from a hierarchical structure: **Journeys** contain **Steps**, and Steps contain **Blocks**. This section covers how to configure each level.
+
+## Journey Schema
+
+The journey object defines the overall experience:
+
+```typescript
+{
+  id: string;                    // jrn_xxxxx
+  title: string;                 // "30 Days of Gratitude"
+  tagline: string;               // "Transform your mindset one day at a time"
+  description: string;           // Full description for listing page
+  category: JourneyCategory;     // emotional, fitness, education, etc.
+  duration_type: DurationType;   // fixed, variable, ongoing
+  duration_display: string;      // "30 days", "8 weeks", "Ongoing"
+  total_steps: number;           // Total steps in the journey
+  frequency: string;             // "daily", "3x weekly"
+  session_minutes: number;       // Expected time per session
+  companion_role: string;        // "Supportive Guide", "Coach", etc.
+  companion_character?: string;  // For role-playing journeys
+  streak_sensitivity: StreakSensitivity;  // strict, forgiving, flexible
+  catch_up_days?: number;        // Days allowed to catch up
+  price_type: PriceType;         // free, coins, gems, premium
+  price_amount?: number;         // Cost if paid
+  cover_image_url?: string;      // Journey cover image
+  color_gradient: string;        // "from-violet-500 to-purple-600"
+  bg_color: string;              // "bg-violet-50"
+}
+```
+
+### Creating a Journey
+
+```bash
+POST /journeys
+```
+
+```json
+{
+  "title": "30 Days of Creative Writing",
+  "tagline": "Unlock your inner author",
+  "description": "A month-long journey to develop your creative writing skills...",
+  "category": "education",
+  "duration_type": "fixed",
+  "duration_display": "30 days",
+  "frequency": "daily",
+  "session_minutes": 15,
+  "companion_role": "Creative Cheerleader",
+  "streak_sensitivity": "forgiving",
+  "catch_up_days": 2,
+  "price_type": "free",
+  "color_gradient": "from-violet-500 to-purple-600",
+  "bg_color": "bg-violet-50"
+}
+```
+
+## Step Schema
+
+Steps are the individual units of interaction within a journey:
+
+```typescript
+{
+  id: string;                    // stp_xxxxx
+  journey_id: string;            // Parent journey
+  position: number;              // Order in the journey (1, 2, 3...)
+  day_number?: number;           // Display as "Day 1", "Day 2", etc.
+  week_number?: number;          // For weekly journeys
+  title: string;                 // "The Door"
+  subtitle?: string;             // Optional subtitle
+  is_milestone: boolean;         // Special celebration step
+  is_template: boolean;          // Repeats for ongoing journeys
+  creates_deliverable: boolean;  // Saves user content
+  completion_rule: CompletionRule;  // How to complete
+  reaction_mode: ReactionMode;   // Companion response style
+  reaction_prompt_override?: string;  // Custom reaction prompt
+  available_after_hours?: number;    // Delay before unlock
+  expires_after_hours?: number;      // Time limit to complete
+}
+```
+
+### Completion Rules
+
+| Rule | Description | Use Case |
+|------|-------------|----------|
+| `all_required` | User must respond to all required blocks | Standard steps |
+| `any_input` | Any single input completes the step | Quick check-ins |
+| `timer_complete` | Timer block completion triggers done | Timed meditation |
+
+### Creating Steps
+
+```bash
+POST /journeys/{journey_id}/steps
+```
+
+```json
+{
+  "position": 1,
+  "day_number": 1,
+  "title": "The Door",
+  "subtitle": "Your first creative prompt",
+  "is_milestone": false,
+  "creates_deliverable": true,
+  "completion_rule": "all_required",
+  "reaction_mode": "celebratory"
+}
+```
+
+### Reordering Steps
+
+```bash
+POST /journeys/{journey_id}/steps/reorder
+```
+
+```json
+{
+  "step_ids": ["stp_third", "stp_first", "stp_second"]
+}
+```
+
+## Block Types
+
+Blocks are the atomic content and interaction units within steps:
+
+### Content Blocks
+
+These blocks display content to the user:
+
+| Block Type | Description | Key Config |
+|------------|-------------|------------|
+| `companion_message` | Companion speaks to user | `content`, `content_variants` |
+| `instruction` | Static instruction/prompt | `content` |
+| `narrative` | Story/scenario framing | `content` |
+
+```json
+{
+  "block_type": "companion_message",
+  "content": "Welcome to Day 1! Today we're going to explore a simple but powerful prompt.",
+  "content_variants": [
+    "Hey there! Ready for your first adventure?",
+    "Welcome, creative soul! Let's begin..."
+  ]
+}
+```
+
+Using `content_variants` allows for randomization to keep repeat experiences fresh.
+
+### Input Blocks
+
+These blocks collect user responses:
+
+#### Text Input
+```json
+{
+  "block_type": "text_input",
+  "content": "Write about a door. Any door—real or imagined.",
+  "config": {
+    "placeholder": "Start writing...",
+    "min_length": 50,
+    "max_length": 2000,
+    "input_style": "long",
+    "allow_voice": true
+  },
+  "is_required": true
+}
+```
+
+#### Voice Input
+```json
+{
+  "block_type": "voice_input",
+  "content": "Record yourself reading your piece aloud.",
+  "config": {
+    "max_duration_seconds": 300,
+    "min_duration_seconds": 30,
+    "transcription_enabled": true
+  }
+}
+```
+
+#### Single Select
+```json
+{
+  "block_type": "single_select",
+  "content": "How are you feeling right now?",
+  "config": {
+    "options": [
+      { "id": "great", "label": "Great!", "value": "great" },
+      { "id": "good", "label": "Pretty good", "value": "good" },
+      { "id": "okay", "label": "Just okay", "value": "okay" },
+      { "id": "low", "label": "Not great", "value": "low" }
+    ],
+    "display": "list",
+    "shuffle": false
+  }
+}
+```
+
+#### Multi Select
+```json
+{
+  "block_type": "multi_select",
+  "content": "What themes resonate with you? (Select all that apply)",
+  "config": {
+    "options": [
+      { "id": "growth", "label": "Personal growth" },
+      { "id": "creativity", "label": "Creativity" },
+      { "id": "peace", "label": "Inner peace" },
+      { "id": "connection", "label": "Connection" }
+    ],
+    "min_selections": 1,
+    "max_selections": 3
+  }
+}
+```
+
+#### Scale
+```json
+{
+  "block_type": "scale",
+  "content": "Rate your energy level:",
+  "config": {
+    "min": 1,
+    "max": 5,
+    "display": "emoji",
+    "emoji_set": ["😴", "😐", "🙂", "😊", "🔥"],
+    "label_min": "Exhausted",
+    "label_max": "Energized"
+  }
+}
+```
+
+#### Binary
+```json
+{
+  "block_type": "binary",
+  "content": "Did you complete your morning routine?",
+  "config": {
+    "yes_label": "Yes, I did!",
+    "no_label": "Not today",
+    "yes_value": "completed",
+    "no_value": "skipped"
+  }
+}
+```
+
+#### Counter
+```json
+{
+  "block_type": "counter",
+  "content": "How many glasses of water did you drink?",
+  "config": {
+    "label": "Glasses",
+    "unit": "glasses",
+    "min": 0,
+    "max": 20,
+    "step": 1,
+    "default_value": 0
+  }
+}
+```
+
+#### Timer
+```json
+{
+  "block_type": "timer",
+  "content": "Let's do a 5-minute meditation.",
+  "config": {
+    "total_seconds": 300,
+    "intervals": [
+      { "label": "Settle in", "seconds": 60, "type": "prep" },
+      { "label": "Focus on breath", "seconds": 180, "type": "main" },
+      { "label": "Return", "seconds": 60, "type": "closing" }
+    ],
+    "allow_pause": true,
+    "allow_early_complete": false,
+    "audio_url": "https://cdn.example.com/meditation-bell.mp3"
+  }
+}
+```
+
+#### Checklist
+```json
+{
+  "block_type": "checklist",
+  "content": "Morning routine checklist:",
+  "config": {
+    "items": [
+      { "id": "water", "label": "Drink a glass of water", "required": true },
+      { "id": "stretch", "label": "5-minute stretch", "required": false },
+      { "id": "journal", "label": "Write 3 gratitudes", "required": true }
+    ],
+    "allow_custom": true
+  }
+}
+```
+
+#### Media Upload
+```json
+{
+  "block_type": "media_upload",
+  "content": "Share a photo of your workspace:",
+  "config": {
+    "accepted_types": ["image/jpeg", "image/png"],
+    "max_size_bytes": 10485760,
+    "multiple": false,
+    "camera_enabled": true
+  }
+}
+```
+
+#### External Confirm
+```json
+{
+  "block_type": "external_confirm",
+  "content": "Go for a 10-minute walk outside.",
+  "config": {
+    "action_description": "Take a 10-minute walk",
+    "confirm_label": "I did it!",
+    "skip_label": "Skip for today",
+    "allow_skip": true,
+    "require_proof": false
+  }
+}
+```
+
+### Creating Blocks
+
+```bash
+POST /journeys/{journey_id}/steps/{step_id}/blocks
+```
+
+```json
+{
+  "position": 1,
+  "block_type": "companion_message",
+  "content": "Welcome to Day 1!",
+  "is_required": false
+}
+```
+
+### Reordering Blocks
+
+```bash
+POST /journeys/{journey_id}/steps/{step_id}/blocks/reorder
+```
+
+```json
+{
+  "block_ids": ["blk_msg", "blk_prompt", "blk_input"]
+}
+```
+
+## Reaction Modes
+
+After a user completes a step, the companion provides a reaction. The mode determines the tone:
+
+| Mode | Tone | Use Case |
+|------|------|----------|
+| `validating` | Warm, gentle, supportive | Emotional content, vulnerability |
+| `celebratory` | Excited, proud, enthusiastic | Achievements, milestones, streaks |
+| `instructive` | Clear, encouraging, constructive | Learning, skill feedback |
+| `playful` | Witty, theatrical, fun | Entertainment, quizzes |
+| `analytical` | Observant, insightful, curious | Pattern recognition over time |
+| `coaching` | Direct, motivating, action-oriented | Fitness, accountability |
+| `minimal` | No chat response, just checkmark | Quick habit logging |
+
+## Reaction Templates
+
+Customize companion reactions with prompt templates:
+
+```bash
+POST /journeys/{journey_id}/reaction-templates
+```
+
+```json
+{
+  "mode": "celebratory",
+  "prompt_template": "You are {{companion_role}}. The user just completed \"{{step_title}}\" on day {{day_number}}.\n\nTheir response: {{user_response}}\n\n{{#if is_milestone}}This is a milestone—make it feel special.{{/if}}\n{{#if streak > 3}}Mention their {{streak}} day streak.{{/if}}\n\nRespond in a celebratory tone. Keep it to 2-4 sentences."
+}
+```
+
+### Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{{companion_role}}` | The journey's companion role |
+| `{{step_title}}` | Current step title |
+| `{{day_number}}` | Current day in journey |
+| `{{user_response}}` | User's input (summarized if long) |
+| `{{is_milestone}}` | Boolean if step is a milestone |
+| `{{streak}}` | Current streak count |
+| `{{journey_title}}` | Journey title |
+
+## Publishing Journeys
+
+Journeys must be published to appear in the marketplace:
+
+```bash
+POST /journeys/{journey_id}/publish
+```
+
+**Validation requirements:**
+- At least one step
+- All steps have at least one block
+- Required fields are set
+
+```json
+{
+  "id": "jrn_abc123",
+  "is_published": true,
+  "published_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Unpublishing
+
+```bash
+POST /journeys/{journey_id}/unpublish
+```
+
+Unpublishing removes the journey from the marketplace but active users can continue their progress.
+
+## Duplicating Journeys
+
+Create a copy of a journey for iteration:
+
+```bash
+POST /journeys/{journey_id}/duplicate
+```
+
+```json
+{
+  "title": "30 Days of Creative Writing v2"
+}
+```
+
+The duplicate includes all steps and blocks but starts unpublished.
